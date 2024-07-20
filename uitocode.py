@@ -47,17 +47,23 @@ def send_message_to_model(message, image_path):
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    try:
-        response = chat_session.send_message([message, image_input])
-        return response.text
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-        if '429' in str(e):
-            st.error("Rate limit exceeded. Retrying in 60 seconds...")
-            time.sleep(60)
+    retries = 3
+    for attempt in range(retries):
+        try:
             response = chat_session.send_message([message, image_input])
+            if response.finish_reason == "RECITATION":
+                st.error("The API response was not satisfactory. Please try again.")
+                return None
             return response.text
-        return None
+        except Exception as e:
+            if '429' in str(e):
+                st.error("Rate limit exceeded. Retrying in 60 seconds...")
+                time.sleep(60)
+            else:
+                st.error(f"An error occurred: {e}")
+                return None
+    st.error("Failed to get a response after several attempts.")
+    return None
 
 # Streamlit app
 def main():
