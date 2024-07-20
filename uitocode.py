@@ -1,11 +1,13 @@
 import streamlit as st
 import pathlib
 from PIL import Image
-import openai
+from openai import OpenAI
+import os
 import time
 
 # Configure the API key from Streamlit secrets
-openai.api_key = st.secrets["openai_api_key"]
+os.environ["OPENAI_API_KEY"] = st.secrets["openai_api_key"]
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 # Function to send a message to the model
 def send_message_to_model(prompt, image_path):
@@ -16,11 +18,11 @@ def send_message_to_model(prompt, image_path):
             # Simplified image description
             image_description = "Image data: " + str(image_data[:100])  # Simplified image description
             response = client.chat.completions.create(
-                model="gpt-4",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": f"{prompt}\n{image_description}"}
                 ],
+                model="gpt-4",
                 max_tokens=2048,  # Adjusted for practical use within limits
                 temperature=1,
                 top_p=0.95
@@ -73,14 +75,14 @@ def main():
 
                         # Generate HTML
                         st.write("🛠️ Generating website...")
-                        html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                        html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include Regular CSS using Bootstrap within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
                         initial_html = send_message_to_model(html_prompt, temp_image_path)
                         if initial_html:
                             st.code(initial_html, language='html')
 
                             # Refine HTML
                             st.write("🔧 Refining website...")
-                            refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
+                            refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with Regular CSS using Bootstrap that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
                             refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
                             if refined_html:
                                 st.code(refined_html, language='html')
