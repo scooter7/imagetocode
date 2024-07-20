@@ -52,7 +52,6 @@ def send_message_to_model(message, image_path):
 # Streamlit app
 def main():
     st.title("UI to Code 👨‍💻 ")
-    st.subheader('Made with ❤️ by [Skirano](https://x.com/skirano)')
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
