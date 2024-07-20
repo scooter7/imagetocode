@@ -8,23 +8,26 @@ import time
 openai.api_key = st.secrets["openai_api_key"]
 
 # Function to send a message to the model
-def send_message_to_model(message, image_path):
+def send_message_to_model(prompt, image_path):
     image_data = pathlib.Path(image_path).read_bytes()
     retries = 3
     for attempt in range(retries):
         try:
-            # You need to use a text description of the image if OpenAI does not support image input
+            # Simplified image description
             image_description = "Image data: " + str(image_data[:100])  # Simplified image description
-            response = openai.Completion.create(
-                engine="text-davinci-003",
-                prompt=f"{message}\n{image_description}",
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": f"{prompt}\n{image_description}"}
+                ],
                 max_tokens=8192,
                 n=1,
                 stop=None,
                 temperature=1,
                 top_p=0.95
             )
-            return response.choices[0].text.strip()
+            return response.choices[0].message['content'].strip()
         except Exception as e:
             if '429' in str(e):
                 st.error("Rate limit exceeded. Retrying in 60 seconds...")
