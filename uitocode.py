@@ -15,7 +15,7 @@ def send_message_to_model(prompt, image_path):
         try:
             # Simplified image description
             image_description = "Image data: " + str(image_data[:100])  # Simplified image description
-            response = openai.ChatCompletion.create(
+            response = openai.Chat.Completion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
