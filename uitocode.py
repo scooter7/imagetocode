@@ -1,12 +1,13 @@
 import streamlit as st
 import pathlib
 from PIL import Image
-import openai
 import os
+from openai import OpenAI
 import time
 
 # Configure the API key from Streamlit secrets
-openai.api_key = st.secrets["openai_api_key"]
+os.environ["OPENAI_API_KEY"] = st.secrets["openai_api_key"]
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 # Function to send a message to the model
 def send_message_to_model(prompt, image_path):
@@ -16,17 +17,17 @@ def send_message_to_model(prompt, image_path):
         try:
             # Simplified image description
             image_description = "Image data: " + str(image_data[:100])  # Simplified image description
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
+            response = client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": f"{prompt}\n{image_description}"}
                 ],
+                model="gpt-4",
                 max_tokens=2048,  # Adjusted for practical use within limits
                 temperature=1,
                 top_p=0.95
             )
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message.content.strip()
         except Exception as e:
             if '429' in str(e):
                 st.error("Rate limit exceeded. Retrying in 60 seconds...")
