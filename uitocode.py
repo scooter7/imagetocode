@@ -27,7 +27,7 @@ def send_message_to_model(prompt, image_path):
                 temperature=1,
                 top_p=0.95
             )
-            return response.choices[0].message['content'].strip()
+            return response['choices'][0]['message']['content'].strip()
         except Exception as e:
             if '429' in str(e):
                 st.error("Rate limit exceeded. Retrying in 60 seconds...")
