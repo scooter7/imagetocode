@@ -26,12 +26,13 @@ def send_message_to_model(prompt, image_path):
                 top_p=0.95
             )
             return response.choices[0].message['content'].strip()
-        except openai.error.RateLimitError as e:
-            st.error("Rate limit exceeded. Retrying in 60 seconds...")
-            time.sleep(60)
         except Exception as e:
-            st.error(f"An error occurred: {e}")
-            return None
+            if '429' in str(e):
+                st.error("Rate limit exceeded. Retrying in 60 seconds...")
+                time.sleep(60)
+            else:
+                st.error(f"An error occurred: {e}")
+                return None
     st.error("Failed to get a response after several attempts.")
     return None
 
