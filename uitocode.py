@@ -15,21 +15,24 @@ def extract_text_from_image(image_path):
     return "Description of the image"
 
 # Function to send a message to the model
-def send_message_to_model(prompt):
+def send_message_to_model(prompt, image_path):
+    image_data = pathlib.Path(image_path).read_bytes()
     retries = 3
     for attempt in range(retries):
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
+            # Simplified image description
+            image_description = "Image data: " + str(image_data[:100])  # Simplified image description
+            response = client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": f"{prompt}\n{image_description}"}
                 ],
+                model="gpt-4",
                 max_tokens=2048,  # Adjusted for practical use within limits
                 temperature=1,
                 top_p=0.95
             )
-            return response.choices[0].message['content'].strip()
+            return response.choices[0].message.content.strip()
         except Exception as e:
             if '429' in str(e):
                 st.error("Rate limit exceeded. Retrying in 60 seconds...")
