@@ -28,7 +28,7 @@ safety_settings = [
 MODEL_NAME = "gemini-1.5-pro-latest"
 
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
-framework = "Regular CSS use Boostrap"  # Change this to "Bootstrap" or any other framework as needed
+framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
 # Create the model
 model = genai.GenerativeModel(
@@ -73,24 +73,44 @@ def main():
                 st.write("🧑‍💻 Looking at your UI...")
                 prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
                 description = send_message_to_model(prompt, temp_image_path)
+                st.session_state['description'] = description
                 st.write(description)
 
-                # Refine the description
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+
+    if 'description' in st.session_state:
+        description = st.session_state['description']
+        if st.button("Refine Description"):
+            try:
                 st.write("🔍 Refining description with visual comparison...")
                 refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
+                st.session_state['refined_description'] = refined_description
                 st.write(refined_description)
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
-                # Generate HTML
+    if 'refined_description' in st.session_state:
+        refined_description = st.session_state['refined_description']
+        if st.button("Generate HTML"):
+            try:
                 st.write("🛠️ Generating website...")
                 html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
+                st.session_state['initial_html'] = initial_html
                 st.code(initial_html, language='html')
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
-                # Refine HTML
+    if 'initial_html' in st.session_state:
+        initial_html = st.session_state['initial_html']
+        if st.button("Refine HTML"):
+            try:
                 st.write("🔧 Refining website...")
                 refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
                 refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
+                st.session_state['refined_html'] = refined_html
                 st.code(refined_html, language='html')
 
                 # Save the refined HTML to a file
@@ -100,8 +120,8 @@ def main():
 
                 # Provide download link for HTML
                 st.download_button(label="Download HTML", data=refined_html, file_name="index.html", mime="text/html")
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
