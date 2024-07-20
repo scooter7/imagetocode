@@ -51,10 +51,11 @@ def send_message_to_model(message, image_path):
     for attempt in range(retries):
         try:
             response = chat_session.send_message([message, image_input])
-            if response.finish_reason == "RECITATION":
+            if hasattr(response, 'text'):
+                return response.text
+            else:
                 st.error("The API response was not satisfactory. Please try again.")
                 return None
-            return response.text
         except Exception as e:
             if '429' in str(e):
                 st.error("Rate limit exceeded. Retrying in 60 seconds...")
