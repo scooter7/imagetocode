@@ -3,8 +3,8 @@ import pathlib
 from PIL import Image
 import google.generativeai as genai
 
-# Configure the API key directly in the script
-API_KEY = 'YOUR KEY'
+# Configure the API key from Streamlit secrets
+API_KEY = st.secrets["gemini_api_key"]
 genai.configure(api_key=API_KEY)
 
 # Generation configuration
