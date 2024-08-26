@@ -64,7 +64,11 @@ def main():
         if st.button("Refine Description"):
             try:
                 st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
+                refine_prompt = (
+                    f"Refine the following UI description based on a detailed analysis of the provided image. "
+                    f"Identify any missing elements or inaccuracies, especially in terms of layout and colors. "
+                    f"Here is the initial description: {description}"
+                )
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.session_state['refined_description'] = refined_description
                 st.write(refined_description)
