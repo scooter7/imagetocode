@@ -2,7 +2,6 @@ import streamlit as st
 import base64
 from openai import OpenAI
 import os
-from PIL import Image
 
 # Set up the OpenAI API key from Streamlit secrets
 os.environ['OPENAI_API_KEY'] = st.secrets["openai_api_key"]
@@ -33,7 +32,7 @@ if upload_file is not None and analyze_button:
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
-                {"role": "user", "content": {"type": "image", "image_url": f"data:image/png;base64,{base64_bytes.decode('utf-8')}" }},
+                {"role": "user", "content": {"type": "image", "data": f"data:image/png;base64,{base64_bytes.decode('utf-8')}" }},
             ],
             max_tokens=4096,
             temperature=1,
@@ -41,4 +40,3 @@ if upload_file is not None and analyze_button:
         )
 
         st.write(response.choices[0].message['content'])
-
