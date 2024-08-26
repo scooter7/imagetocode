@@ -27,7 +27,7 @@ def send_message_to_model(prompt, image_path):
         max_tokens=8192,
         top_p=0.95
     )
-    return completion['choices'][0]['message']['content']
+    return completion.choices[0].message['content']
 
 # Streamlit app
 def main():
