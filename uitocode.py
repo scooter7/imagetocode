@@ -50,8 +50,12 @@ def main():
 
             # Generate UI description
             if st.button("Code UI"):
-                st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements."
+                st.write("🧑‍💻 Analyzing the UI elements in your image...")
+                prompt = (
+                    "Analyze the UI elements in the provided image and describe them in accurate detail. "
+                    "For each UI element, include its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "Also describe the color and position of the elements."
+                )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -63,7 +67,7 @@ def main():
         description = st.session_state['description']
         if st.button("Refine Description"):
             try:
-                st.write("🔍 Refining description with visual comparison...")
+                st.write("🔍 Refining the UI description based on the image...")
                 refine_prompt = (
                     f"Refine the following UI description based on a detailed analysis of the provided image. "
                     f"Identify any missing elements or inaccuracies, especially in terms of layout and colors. "
@@ -80,7 +84,13 @@ def main():
         if st.button("Generate HTML"):
             try:
                 st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                html_prompt = (
+                    f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. "
+                    f"Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. "
+                    f"The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. "
+                    f"Do not include any explanations or comments. Avoid using ```html. and ``` at the end. "
+                    f"ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                )
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['initial_html'] = initial_html
                 st.code(initial_html, language='html')
@@ -92,7 +102,11 @@ def main():
         if st.button("Refine HTML"):
             try:
                 st.write("🔧 Refining website...")
-                refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
+                refine_html_prompt = (
+                    f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS "
+                    f"that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. "
+                    f"Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
+                )
                 refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
                 st.session_state['refined_html'] = refined_html
                 st.code(refined_html, language='html')
