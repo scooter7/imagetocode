@@ -7,6 +7,8 @@ import openai
 API_KEY = st.secrets["openai_api_key"]
 openai.api_key = API_KEY
 
+client = openai
+
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
