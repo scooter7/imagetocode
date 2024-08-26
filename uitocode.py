@@ -23,16 +23,20 @@ analyze_button = st.button("Analyze", type="primary")
 if upload_file is not None and analyze_button:
     with st.spinner("Analyzing..."):
         base64_bytes = base64.b64encode(upload_file.getvalue())
-        prompt = """You are a frontend developer capable of analyzing the given image. After analysis, create HTML and CSS 
-        code for the website that matches the given image as closely as possible. If needed, you may also write a Python script 
-        to load the HTML and CSS code for checking similarity."""
-        
+        base64_string = base64_bytes.decode('utf-8')
+        prompt = f"""You are a frontend developer capable of analyzing the given image (encoded below in base64). 
+        After analysis, create HTML and CSS code for the website that matches the given image as closely as possible. 
+        If needed, you may also write a Python script to load the HTML and CSS code for checking similarity.
+
+        Base64 image data:
+        {base64_string}
+        """
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
-                {"role": "user", "content": {"type": "image", "data": f"data:image/png;base64,{base64_bytes.decode('utf-8')}" }},
             ],
             max_tokens=4096,
             temperature=1,
@@ -40,3 +44,4 @@ if upload_file is not None and analyze_button:
         )
 
         st.write(response.choices[0].message['content'])
+
