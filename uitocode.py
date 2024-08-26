@@ -20,7 +20,7 @@ def send_message_to_model(prompt, image_path):
     completion = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": "You are an AI trained to assist with detailed UI analysis."},
             {"role": "user", "content": prompt}
         ],
         temperature=1,
@@ -52,9 +52,9 @@ def main():
             if st.button("Code UI"):
                 st.write("🧑‍💻 Analyzing the UI elements in your image...")
                 prompt = (
-                    "Analyze the UI elements in the provided image and describe them in accurate detail. "
-                    "For each UI element, include its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
-                    "Also describe the color and position of the elements."
+                    "You are provided with an image containing a UI. Generate a detailed description of the UI based on this image. "
+                    "For each UI element, provide its name, color, and position, and include its bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "Ensure the description is thorough and accurate, without asking for additional input."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
