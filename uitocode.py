@@ -1,53 +1,30 @@
 import streamlit as st
 import pathlib
 from PIL import Image
-import google.generativeai as genai
+import openai
 
 # Configure the API key from Streamlit secrets
-API_KEY = st.secrets["gemini_api_key"]
-genai.configure(api_key=API_KEY)
+API_KEY = st.secrets["openai_api_key"]
+openai.api_key = API_KEY
 
 # Generation configuration
 generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
-    "response_mime_type": "text/plain",
+    "max_tokens": 8192,
+    "model": "gpt-4o-mini",
 }
-
-# Safety settings
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
-
-# Model name
-MODEL_NAME = "gemini-1.5-pro-latest"
 
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
-# Create the model
-model = genai.GenerativeModel(
-    model_name=MODEL_NAME,
-    safety_settings=safety_settings,
-    generation_config=generation_config,
-)
-
-# Start a chat session
-chat_session = model.start_chat(history=[])
-
 # Function to send a message to the model
-def send_message_to_model(message, image_path):
-    image_input = {
-        'mime_type': 'image/jpeg',
-        'data': pathlib.Path(image_path).read_bytes()
-    }
-    response = chat_session.send_message([message, image_input])
-    return response.text
+def send_message_to_model(prompt, image_path):
+    with open(image_path, "rb") as image_file:
+        image_bytes = image_file.read()
+    response = openai.Image.create(prompt=prompt, image=image_bytes, **generation_config)
+    return response["choices"][0]["text"]
 
 # Streamlit app
 def main():
