@@ -7,15 +7,6 @@ import openai
 API_KEY = st.secrets["openai_api_key"]
 openai.api_key = API_KEY
 
-# Generation configuration
-generation_config = {
-    "temperature": 1,
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_tokens": 8192,
-    "model": "gpt-4o-mini",
-}
-
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
@@ -23,8 +14,18 @@ framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as 
 def send_message_to_model(prompt, image_path):
     with open(image_path, "rb") as image_file:
         image_bytes = image_file.read()
-    response = openai.Image.create(prompt=prompt, image=image_bytes, **generation_config)
-    return response["choices"][0]["text"]
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=1,
+        max_tokens=8192,
+        top_p=0.95,
+        top_k=64
+    )
+    return response['choices'][0]['message']['content']
 
 # Streamlit app
 def main():
@@ -48,7 +49,7 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements."
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -61,7 +62,7 @@ def main():
         if st.button("Refine Description"):
             try:
                 st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
+                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.session_state['refined_description'] = refined_description
                 st.write(refined_description)
