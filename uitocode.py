@@ -7,6 +7,9 @@ import openai
 API_KEY = st.secrets["openai_api_key"]
 openai.api_key = API_KEY
 
+# Create a client instance
+client = openai
+
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
@@ -25,7 +28,7 @@ def send_message_to_model(prompt, image_path):
         top_p=0.95,
         top_k=64
     )
-    return response['choices'][0]['message']['content']
+    return completion['choices'][0]['message']['content']
 
 # Streamlit app
 def main():
