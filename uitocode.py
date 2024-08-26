@@ -28,8 +28,8 @@ if upload_file is not None and analyze_button:
         base64_bytes = base64.b64encode(upload_file.getvalue())
         base64_string = base64_bytes.decode('utf-8')
         
-        # Define the maximum chunk size
-        max_chunk_size = 1024 * 1024  # 1 MB per chunk
+        # Define a smaller chunk size to stay well below the limit
+        max_chunk_size = 500 * 1024  # 500 KB per chunk
         chunks = chunk_string(base64_string, max_chunk_size)
 
         combined_result = ""
