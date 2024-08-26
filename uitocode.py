@@ -20,28 +20,40 @@ if upload_file:
 
 analyze_button = st.button("Analyze", type="primary")
 
+def chunk_string(string, chunk_size):
+    return [string[i:i + chunk_size] for i in range(0, len(string), chunk_size)]
+
 if upload_file is not None and analyze_button:
     with st.spinner("Analyzing..."):
         base64_bytes = base64.b64encode(upload_file.getvalue())
         base64_string = base64_bytes.decode('utf-8')
-        prompt = f"""You are a frontend developer capable of analyzing the given image (encoded below in base64). 
-        After analysis, create HTML and CSS code for the website that matches the given image as closely as possible. 
-        If needed, you may also write a Python script to load the HTML and CSS code for checking similarity.
+        
+        # Define the maximum chunk size
+        max_chunk_size = 1024 * 1024  # 1 MB per chunk
+        chunks = chunk_string(base64_string, max_chunk_size)
 
-        Base64 image data:
-        {base64_string}
-        """
+        combined_result = ""
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            max_tokens=4096,
-            temperature=1,
-            top_p=0.95
-        )
+        for i, chunk in enumerate(chunks):
+            prompt = f"""You are a frontend developer capable of analyzing the given image (encoded below in base64). 
+            After analysis, create HTML and CSS code for the website that matches the given image as closely as possible. 
+            If needed, you may also write a Python script to load the HTML and CSS code for checking similarity.
 
-        st.write(response.choices[0].message['content'])
+            Base64 image data (part {i+1}/{len(chunks)}):
+            {chunk}
+            """
 
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=2048,  # Adjust max tokens for chunk size
+                temperature=1,
+                top_p=0.95
+            )
+
+            combined_result += response.choices[0].message['content']
+
+        st.write(combined_result)
