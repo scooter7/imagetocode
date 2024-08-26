@@ -14,7 +14,7 @@ framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as 
 def send_message_to_model(prompt, image_path):
     with open(image_path, "rb") as image_file:
         image_bytes = image_file.read()
-    completion = openai.ChatCompletion.create(
+    completion = client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are an AI trained to assist with detailed UI analysis and code generation."},
