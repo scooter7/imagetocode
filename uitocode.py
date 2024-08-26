@@ -7,9 +7,6 @@ import openai
 API_KEY = st.secrets["openai_api_key"]
 openai.api_key = API_KEY
 
-# Create a client instance
-client = openai
-
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
 
@@ -17,10 +14,10 @@ framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as 
 def send_message_to_model(prompt, image_path):
     with open(image_path, "rb") as image_file:
         image_bytes = image_file.read()
-    completion = client.chat.completions.create(
-        model="gpt-4o-mini",
+    completion = openai.ChatCompletion.create(
+        model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are an AI trained to assist with detailed UI analysis."},
+            {"role": "system", "content": "You are an AI trained to assist with detailed UI analysis and code generation."},
             {"role": "user", "content": prompt}
         ],
         temperature=1,
@@ -52,9 +49,9 @@ def main():
             if st.button("Code UI"):
                 st.write("🧑‍💻 Analyzing the UI elements in your image...")
                 prompt = (
-                    "You are provided with an image containing a UI. Generate a detailed description of the UI based on this image. "
-                    "For each UI element, provide its name, color, and position, and include its bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
-                    "Ensure the description is thorough and accurate, without asking for additional input."
+                    "Analyze the UI elements in the provided image and describe them in accurate detail. "
+                    "For each UI element, include its name, color, and position, and include its bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "Ensure the description is thorough and accurate, focusing on the visual aspects of the UI."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
@@ -67,7 +64,7 @@ def main():
         description = st.session_state['description']
         if st.button("Refine Description"):
             try:
-                st.write("🔍 Refining the UI description based on the image...")
+                st.write("🔍 Refining description with visual comparison...")
                 refine_prompt = (
                     f"Refine the following UI description based on a detailed analysis of the provided image. "
                     f"Identify any missing elements or inaccuracies, especially in terms of layout and colors. "
