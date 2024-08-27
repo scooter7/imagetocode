@@ -42,14 +42,28 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
-def send_message_to_model(message, image_path):
+# Function to send a message to the model with chunking and retry mechanism
+def send_message_to_model(message, image_path, chunk_size=1024):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    response = chat_session.send_message([message, image_input])
-    return response.text
+    
+    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
+    responses = []
+    
+    for chunk in chunks:
+        try:
+            response = chat_session.send_message([chunk, image_input])
+            responses.append(response.text)
+        except Exception as e:
+            if 'RECITATION' in str(e):
+                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
+                return send_message_to_model(message, image_path, chunk_size // 2)
+            else:
+                raise e
+    
+    return "".join(responses)
 
 # Streamlit app
 def main():
