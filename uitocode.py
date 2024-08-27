@@ -80,33 +80,46 @@ def main():
             if image.mode == 'RGBA':
                 image = image.convert('RGB')
 
-            # Pre-process the image to focus on key UI elements
-            st.write("🔍 Pre-processing the image to focus on key UI elements...")
-
             # Save the uploaded image temporarily
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate HTML
-            if st.button("Generate HTML"):
-                st.write("🛠️ Generating HTML...")
+            # Step 1: Initial Description and Analysis
+            if st.button("Analyze UI"):
+                st.write("🔍 Analyzing the UI elements...")
+                analysis_prompt = (
+                    "Analyze the attached UI image. Provide a detailed description of the colors used, gradients, div structure, "
+                    "font styles, and any other relevant design elements. Focus on elements that will be important for generating HTML and CSS. "
+                    "This analysis will guide the generation of the HTML structure and CSS styling."
+                )
+                analysis_description = send_message_to_model(analysis_prompt, temp_image_path)
+                st.session_state['analysis_description'] = analysis_description
+
+                st.write(analysis_description)
+
+            # Step 2: Generate HTML
+            if 'analysis_description' in st.session_state and st.button("Generate HTML"):
+                st.write("🛠️ Generating HTML based on analysis...")
                 html_prompt = (
-                    "Based on the attached UI image, generate only the HTML code for the webpage. "
-                    "Do not include any descriptions, explanations, or summaries. "
-                    "Return only valid HTML code. Focus on the structure and layout using appropriate HTML tags."
+                    "Based on the following analysis of the UI elements, generate the HTML code for the webpage. "
+                    "Use appropriate HTML5 semantic elements such as <header>, <section>, <nav>, <article>, and <footer>. "
+                    "Ensure that the layout is responsive and uses the Bootstrap grid system with proper class names. "
+                    "Return only valid HTML code without any descriptions or explanations. "
+                    "Here is the analysis: {analysis_description}".format(analysis_description=st.session_state['analysis_description'])
                 )
                 html_code = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['html_code'] = html_code
 
                 st.code(html_code, language='html')
 
-            # Generate CSS
+            # Step 3: Generate CSS
             if 'html_code' in st.session_state and st.button("Generate CSS"):
-                st.write("🎨 Generating CSS...")
+                st.write("🎨 Generating CSS based on analysis...")
                 css_prompt = (
-                    "Based on the attached UI image, generate only the CSS code to style the HTML structure. "
-                    "Ensure that any gradients, colors, and other styles used in the UI are correctly represented in the CSS. "
-                    "Do not include any descriptive content or explanations, only return valid CSS code."
+                    "Based on the following analysis of the UI elements, generate the CSS code to style the HTML structure. "
+                    "Ensure that the colors, gradients, padding, margins, and font styles match the design elements described. "
+                    "Ensure the CSS adheres to responsive design principles. Return only valid CSS code. "
+                    "Here is the analysis: {analysis_description}".format(analysis_description=st.session_state['analysis_description'])
                 )
                 css_code = send_message_to_model(css_prompt, temp_image_path)
                 st.session_state['css_code'] = css_code
