@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
+    "max_output_tokens": 2048,  # Reduced to help manage chunking
     "response_mime_type": "text/plain",
 }
 
@@ -27,8 +27,8 @@ safety_settings = [
 # Model name
 MODEL_NAME = "gemini-1.5-pro-latest"
 
-# Framework selection (e.g., Tailwind, Bootstrap, etc.)
-framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
+# Framework selection
+framework = "Bootstrap"
 
 # Create the model
 model = genai.GenerativeModel(
@@ -40,14 +40,21 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
-def send_message_to_model(message, image_path):
+# Function to send a message to the model with chunking
+def send_message_to_model(message, image_path, chunk_size=2048):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    response = chat_session.send_message([message, image_input])
-    return response.text
+    
+    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
+    responses = []
+    
+    for chunk in chunks:
+        response = chat_session.send_message([chunk, image_input])
+        responses.append(response.text)
+    
+    return "".join(responses)
 
 # Streamlit app
 def main():
@@ -93,33 +100,31 @@ def main():
 
     if 'refined_description' in st.session_state:
         refined_description = st.session_state['refined_description']
-        if st.button("Generate HTML"):
+        if st.button("Generate HTML & CSS"):
             try:
                 st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within a separate CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Here is the refined description: {refined_description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['initial_html'] = initial_html
-                st.code(initial_html, language='html')
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+                
+                # Split HTML and CSS
+                html_code, css_code = initial_html.split("<style>", 1)
+                css_code = css_code.replace("</style>", "")
 
-    if 'initial_html' in st.session_state:
-        initial_html = st.session_state['initial_html']
-        if st.button("Refine HTML"):
-            try:
-                st.write("🔧 Refining website...")
-                refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
-                refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
-                st.session_state['refined_html'] = refined_html
-                st.code(refined_html, language='html')
+                st.code(html_code, language='html')
+                st.code(css_code, language='css')
 
-                # Save the refined HTML to a file
+                # Save the HTML and CSS to files
                 with open("index.html", "w") as file:
-                    file.write(refined_html)
-                st.success("HTML file 'index.html' has been created.")
+                    file.write(html_code)
+                with open("style.css", "w") as file:
+                    file.write(css_code)
 
-                # Provide download link for HTML
-                st.download_button(label="Download HTML", data=refined_html, file_name="index.html", mime="text/html")
+                st.success("HTML file 'index.html' and CSS file 'style.css' have been created.")
+
+                # Provide download link for HTML and CSS
+                st.download_button(label="Download HTML", data=html_code, file_name="index.html", mime="text/html")
+                st.download_button(label="Download CSS", data=css_code, file_name="style.css", mime="text/css")
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
