@@ -19,7 +19,6 @@ generation_config = {
 }
 
 # Safety settings
-safety_settings are the same as previous:
 safety_settings = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
