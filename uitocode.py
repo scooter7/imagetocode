@@ -97,27 +97,26 @@ def main():
 
     if 'description' in st.session_state:
         description = st.session_state['description']
-        if st.button("Generate HTML and CSS"):
+        if st.button("Generate HTML"):
             try:
-                st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI, and ensure that any gradients are correctly implemented. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Ensure that CSS is embedded within <style> tags within the HTML. Here is the refined description: {description}"
-                initial_html = send_message_to_model(html_prompt, temp_image_path)
-                st.session_state['initial_html'] = initial_html
-                st.code(initial_html, language='html')
+                st.write("🛠️ Generating HTML...")
+                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Use appropriate HTML5 semantic elements and structure. Ensure the layout is responsive and follows best practices for {framework}. Do not include any CSS. Here is the refined description: {description}"
+                html_code = send_message_to_model(html_prompt, temp_image_path)
+                st.session_state['html_code'] = html_code
+                st.code(html_code, language='html')
 
-                # Split the HTML and CSS if the response includes both
-                if "<style>" in initial_html and "</style>" in initial_html:
-                    html_code, css_code = initial_html.split("<style>", 1)
-                    css_code = css_code.replace("</style>", "")
-                else:
-                    html_code = initial_html
-                    css_code = None  # No CSS found
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
-                # Check if CSS was found and fallback if necessary
-                if css_code is None or css_code.strip() == "":
-                    st.warning("No CSS was found in the initial response. Generating CSS separately...")
-                    css_prompt = f"Generate the CSS code to style the HTML structure for the UI. Ensure that colors, gradients, padding, margins, fonts, and other relevant styling are correctly implemented. Use {framework} for responsiveness."
-                    css_code = send_message_to_model(css_prompt, temp_image_path)
+    if 'html_code' in st.session_state:
+        html_code = st.session_state['html_code']
+        if st.button("Generate CSS"):
+            try:
+                st.write("🎨 Generating CSS...")
+                css_prompt = f"Generate the CSS code to style the HTML structure for the UI. Ensure that colors, gradients, padding, margins, fonts, and other relevant styling are correctly implemented. Use {framework} for responsiveness. Here is the refined description: {description}"
+                css_code = send_message_to_model(css_prompt, temp_image_path)
+                st.session_state['css_code'] = css_code
+                st.code(css_code, language='css')
 
                 # Save HTML and CSS files in memory
                 html_bytes = html_code.encode('utf-8')
@@ -132,7 +131,7 @@ def main():
 
                 # Provide download link for the zip file
                 st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
-                
+
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
