@@ -84,36 +84,17 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate UI description
-            if st.button("Code UI"):
-                st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
-                description = send_message_to_model(prompt, temp_image_path)
-                st.session_state['description'] = description
-                st.write(description)
-
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-
-    if 'description' in st.session_state:
-        description = st.session_state['description']
-        if st.button("Refine Description"):
-            try:
-                st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
-                refined_description = send_message_to_model(refine_prompt, temp_image_path)
-                st.session_state['refined_description'] = refined_description
-                st.write(refined_description)
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    if 'refined_description' in st.session_state:
-        refined_description = st.session_state['refined_description']
-        if st.button("Generate HTML & CSS"):
-            try:
-                st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within a separate CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Here is the refined description: {refined_description}"
-                initial_html = send_message_to_model(html_prompt, temp_image_path)
+            # Generate UI description and HTML & CSS in one step
+            if st.button("Generate HTML & CSS"):
+                st.write("🛠️ Generating UI description, HTML, and CSS...")
+                prompt = (
+                    "Describe this UI in accurate details. "
+                    "When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "Also Describe the color of the elements. "
+                    "Then, create an HTML file based on this UI description, using Bootstrap CSS within a separate CSS file to style the elements. "
+                    "The UI needs to be responsive and mobile-first, matching the original UI as closely as possible."
+                )
+                initial_html = send_message_to_model(prompt, temp_image_path)
                 st.session_state['initial_html'] = initial_html
 
                 if "<style>" in initial_html and "</style>" in initial_html:
@@ -139,6 +120,47 @@ def main():
 
                 # Provide download link for the zip file
                 st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
+
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+
+    if 'initial_html' in st.session_state:
+        initial_html = st.session_state['initial_html']
+        if st.button("Revise HTML & CSS"):
+            try:
+                st.write("🔧 Refining HTML & CSS...")
+                refine_html_prompt = (
+                    "Validate the following HTML code based on the UI description and image and provide a refined version "
+                    "of the HTML code with Bootstrap CSS that improves accuracy, responsiveness, and adherence to the original design. "
+                    "ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end."
+                )
+                refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
+                st.session_state['refined_html'] = refined_html
+
+                if "<style>" in refined_html and "</style>" in refined_html:
+                    html_code, css_code = refined_html.split("<style>", 1)
+                    css_code = css_code.replace("</style>", "")
+                else:
+                    html_code = refined_html
+                    css_code = "/* No CSS found in the model's response */"
+
+                st.code(html_code, language='html')
+                st.code(css_code, language='css')
+
+                # Save the refined HTML and CSS to files in-memory
+                html_bytes = html_code.encode('utf-8')
+                css_bytes = css_code.encode('utf-8')
+                in_memory_zip = io.BytesIO()
+                with zipfile.ZipFile(in_memory_zip, "w") as zf:
+                    zf.writestr("index.html", html_bytes)
+                    zf.writestr("style.css", css_bytes)
+                in_memory_zip.seek(0)
+
+                st.success("Refined HTML and CSS files have been created.")
+
+                # Provide download link for the refined zip file
+                st.download_button(label="Download Refined ZIP", data=in_memory_zip, file_name="refined_web_files.zip", mime="application/zip")
+
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
