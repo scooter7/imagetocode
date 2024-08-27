@@ -2,6 +2,8 @@ import streamlit as st
 import pathlib
 from PIL import Image
 import google.generativeai as genai
+import zipfile
+import io
 
 # Configure the API key from Streamlit secrets
 API_KEY = st.secrets["gemini_api_key"]
@@ -124,17 +126,19 @@ def main():
                 st.code(html_code, language='html')
                 st.code(css_code, language='css')
 
-                # Save the HTML and CSS to files
-                with open("index.html", "w") as file:
-                    file.write(html_code)
-                with open("style.css", "w") as file:
-                    file.write(css_code)
+                # Save the HTML and CSS to files in-memory
+                html_bytes = html_code.encode('utf-8')
+                css_bytes = css_code.encode('utf-8')
+                in_memory_zip = io.BytesIO()
+                with zipfile.ZipFile(in_memory_zip, "w") as zf:
+                    zf.writestr("index.html", html_bytes)
+                    zf.writestr("style.css", css_bytes)
+                in_memory_zip.seek(0)
 
-                st.success("HTML file 'index.html' and CSS file 'style.css' have been created.")
+                st.success("HTML and CSS files have been created.")
 
-                # Provide download link for HTML and CSS
-                st.download_button(label="Download HTML", data=html_code, file_name="index.html", mime="text/html")
-                st.download_button(label="Download CSS", data=css_code, file_name="style.css", mime="text/css")
+                # Provide download link for the zip file
+                st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
