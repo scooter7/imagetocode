@@ -14,7 +14,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 1024,
+    "max_output_tokens": 8192,
     "response_mime_type": "text/plain",
 }
 
@@ -29,7 +29,7 @@ safety_settings = [
 # Model name
 MODEL_NAME = "gemini-1.5-pro-latest"
 
-# Framework selection
+# Framework selection (e.g., Tailwind, Bootstrap, etc.)
 framework = "Bootstrap"
 
 # Create the model
@@ -42,28 +42,14 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with chunking and retry mechanism
-def send_message_to_model(message, image_path, chunk_size=1024):
+# Function to send a message to the model
+def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    
-    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
-    responses = []
-    
-    for chunk in chunks:
-        try:
-            response = chat_session.send_message([chunk, image_input])
-            responses.append(response.text)
-        except Exception as e:
-            if 'RECITATION' in str(e):
-                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
-                return send_message_to_model(message, image_path, chunk_size // 2)
-            else:
-                raise e
-    
-    return "".join(responses)
+    response = chat_session.send_message([message, image_input])
+    return response.text
 
 # Streamlit app
 def main():
@@ -84,50 +70,37 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Step 1: Initial Description and Analysis
-            if st.button("Analyze UI"):
-                st.write("🔍 Analyzing the UI elements...")
-                analysis_prompt = (
-                    "Analyze the attached UI image. Provide a detailed description of the colors used, gradients, div structure, "
-                    "font styles, and any other relevant design elements. Focus on elements that will be important for generating HTML and CSS. "
-                    "This analysis will guide the generation of the HTML structure and CSS styling."
-                )
-                analysis_description = send_message_to_model(analysis_prompt, temp_image_path)
-                st.session_state['analysis_description'] = analysis_description
+            # Generate UI description
+            if st.button("Code UI"):
+                st.write("🧑‍💻 Looking at your UI...")
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                description = send_message_to_model(prompt, temp_image_path)
+                st.session_state['description'] = description
+                st.write(description)
 
-                st.write(analysis_description)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
 
-            # Step 2: Generate HTML
-            if 'analysis_description' in st.session_state and st.button("Generate HTML"):
-                st.write("🛠️ Generating HTML based on analysis...")
-                html_prompt = (
-                    "Based on the following analysis of the UI elements, generate the HTML code for the webpage. "
-                    "Use appropriate HTML5 semantic elements such as <header>, <section>, <nav>, <article>, and <footer>. "
-                    "Ensure that the layout is responsive and uses the Bootstrap grid system with proper class names. "
-                    "Return only valid HTML code without any descriptions or explanations. "
-                    "Here is the analysis: {analysis_description}".format(analysis_description=st.session_state['analysis_description'])
-                )
-                html_code = send_message_to_model(html_prompt, temp_image_path)
-                st.session_state['html_code'] = html_code
+    if 'description' in st.session_state:
+        description = st.session_state['description']
+        if st.button("Generate HTML"):
+            try:
+                st.write("🛠️ Generating website...")
+                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {description}"
+                initial_html = send_message_to_model(html_prompt, temp_image_path)
+                st.session_state['initial_html'] = initial_html
+                st.code(initial_html, language='html')
 
-                st.code(html_code, language='html')
+                # Split the HTML and CSS if the response includes both
+                if "<style>" in initial_html and "</style>" in initial_html:
+                    html_code, css_code = initial_html.split("<style>", 1)
+                    css_code = css_code.replace("</style>", "")
+                else:
+                    html_code = initial_html
+                    css_code = "/* No CSS found in the model's response */"
 
-            # Step 3: Generate CSS
-            if 'html_code' in st.session_state and st.button("Generate CSS"):
-                st.write("🎨 Generating CSS based on analysis...")
-                css_prompt = (
-                    "Based on the following analysis of the UI elements, generate the CSS code to style the HTML structure. "
-                    "Ensure that the colors, gradients, padding, margins, and font styles match the design elements described. "
-                    "Ensure the CSS adheres to responsive design principles. Return only valid CSS code. "
-                    "Here is the analysis: {analysis_description}".format(analysis_description=st.session_state['analysis_description'])
-                )
-                css_code = send_message_to_model(css_prompt, temp_image_path)
-                st.session_state['css_code'] = css_code
-
-                st.code(css_code, language='css')
-
-                # Save the HTML and CSS to files in-memory
-                html_bytes = st.session_state['html_code'].encode('utf-8')
+                # Save HTML and CSS files in memory
+                html_bytes = html_code.encode('utf-8')
                 css_bytes = css_code.encode('utf-8')
                 in_memory_zip = io.BytesIO()
                 with zipfile.ZipFile(in_memory_zip, "w") as zf:
@@ -139,9 +112,9 @@ def main():
 
                 # Provide download link for the zip file
                 st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
-
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+                
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
