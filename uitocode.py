@@ -11,10 +11,10 @@ genai.configure(api_key=API_KEY)
 
 # Generation configuration
 generation_config = {
-    "temperature": 0.7,  # Reduced temperature to focus on more predictable outputs
-    "top_p": 0.9,        # Reduced top_p to limit diversity
-    "top_k": 40,         # Reduced top_k to limit the range of outputs
-    "max_output_tokens": 4096,  # Reduced max_output_tokens to avoid exceeding limits
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "max_output_tokens": 4096,
     "response_mime_type": "text/plain",
 }
 
@@ -73,7 +73,7 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI with essential details only, focusing on layout, main elements, colors, and gradients."
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements, including any gradients present."
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -87,9 +87,9 @@ def main():
             try:
                 st.write("🛠️ Generating HTML...")
                 html_prompt = (
-                    f"Create the HTML structure based on the following UI description. "
-                    f"Focus on key elements, layout, and responsiveness using {framework}. "
-                    f"Avoid generating unnecessary details. "
+                    f"Generate only the HTML code for the following UI. "
+                    f"Do not include any explanations, comments, or non-HTML content. "
+                    f"Use Bootstrap for layout and structure. "
                     f"Here is the description: {description}"
                 )
                 html_code = send_message_to_model(html_prompt, temp_image_path)
@@ -105,9 +105,9 @@ def main():
             try:
                 st.write("🎨 Generating CSS...")
                 css_prompt = (
-                    f"Generate the CSS code to style the HTML structure. "
-                    f"Ensure colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
-                    f"Use {framework} for responsiveness."
+                    f"Generate only the CSS code to style the HTML structure. "
+                    f"Do not include any explanations, comments, or non-CSS content. "
+                    f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined."
                 )
                 css_code = send_message_to_model(css_prompt, temp_image_path)
                 st.session_state['css_code'] = css_code
