@@ -19,6 +19,7 @@ generation_config = {
 }
 
 # Safety settings
+safety_settings are the same as previous:
 safety_settings = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -73,7 +74,7 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements, including any gradients present."
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -83,10 +84,10 @@ def main():
 
     if 'description' in st.session_state:
         description = st.session_state['description']
-        if st.button("Generate HTML"):
+        if st.button("Generate HTML and CSS"):
             try:
                 st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {description}"
+                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI, and ensure that any gradients are correctly implemented. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Ensure that CSS is embedded within <style> tags within the HTML. Here is the refined description: {description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['initial_html'] = initial_html
                 st.code(initial_html, language='html')
@@ -97,7 +98,13 @@ def main():
                     css_code = css_code.replace("</style>", "")
                 else:
                     html_code = initial_html
-                    css_code = "/* No CSS found in the model's response */"
+                    css_code = None  # No CSS found
+
+                # Check if CSS was found and fallback if necessary
+                if css_code is None or css_code.strip() == "":
+                    st.warning("No CSS was found in the initial response. Generating CSS separately...")
+                    css_prompt = f"Generate the CSS code to style the HTML structure for the UI. Ensure that colors, gradients, padding, margins, fonts, and other relevant styling are correctly implemented. Use {framework} for responsiveness."
+                    css_code = send_message_to_model(css_prompt, temp_image_path)
 
                 # Save HTML and CSS files in memory
                 html_bytes = html_code.encode('utf-8')
