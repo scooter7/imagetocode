@@ -84,11 +84,12 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate UI description and HTML & CSS in one step
+            # Generate HTML & CSS with gradients considered
             if st.button("Generate HTML & CSS"):
                 st.write("🛠️ Generating HTML and CSS...")
                 prompt = (
                     "Generate the HTML and CSS code for a webpage based on the following UI elements and layout. "
+                    "Ensure that any gradients used in the design are included and properly represented in the CSS. "
                     "Do not include any descriptions or explanations, only return the HTML and CSS code. "
                     "Make sure to use Bootstrap for styling and ensure the webpage is responsive and matches the original UI as closely as possible."
                 )
