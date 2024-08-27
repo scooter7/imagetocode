@@ -84,30 +84,34 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate HTML & CSS with gradients considered
-            if st.button("Generate HTML & CSS"):
-                st.write("🛠️ Generating HTML and CSS...")
-                prompt = (
-                    "Generate the HTML and CSS code for a webpage based on the following UI elements and layout. "
-                    "Ensure that any gradients used in the design are included and properly represented in the CSS. "
-                    "Do not include any descriptions or explanations, only return the HTML and CSS code. "
-                    "Make sure to use Bootstrap for styling and ensure the webpage is responsive and matches the original UI as closely as possible."
+            # Generate HTML
+            if st.button("Generate HTML"):
+                st.write("🛠️ Generating HTML...")
+                html_prompt = (
+                    "Generate only the HTML code for a webpage based on the given UI. "
+                    "Do not include any descriptive content, explanations, or CSS. "
+                    "Focus only on the HTML structure. The HTML should include placeholder classes and IDs where necessary."
                 )
-                initial_html = send_message_to_model(prompt, temp_image_path)
-                st.session_state['initial_html'] = initial_html
-
-                if "<style>" in initial_html and "</style>" in initial_html:
-                    html_code, css_code = initial_html.split("<style>", 1)
-                    css_code = css_code.replace("</style>", "")
-                else:
-                    html_code = initial_html
-                    css_code = "/* No CSS found in the model's response */"
+                html_code = send_message_to_model(html_prompt, temp_image_path)
+                st.session_state['html_code'] = html_code
 
                 st.code(html_code, language='html')
+
+            # Generate CSS
+            if 'html_code' in st.session_state and st.button("Generate CSS"):
+                st.write("🎨 Generating CSS...")
+                css_prompt = (
+                    "Generate only the CSS code to style the HTML structure. "
+                    "Ensure that any gradients and colors used in the UI are correctly represented. "
+                    "Do not include any descriptive content or explanations, only the CSS."
+                )
+                css_code = send_message_to_model(css_prompt, temp_image_path)
+                st.session_state['css_code'] = css_code
+
                 st.code(css_code, language='css')
 
                 # Save the HTML and CSS to files in-memory
-                html_bytes = html_code.encode('utf-8')
+                html_bytes = st.session_state['html_code'].encode('utf-8')
                 css_bytes = css_code.encode('utf-8')
                 in_memory_zip = io.BytesIO()
                 with zipfile.ZipFile(in_memory_zip, "w") as zf:
