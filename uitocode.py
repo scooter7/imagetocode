@@ -50,9 +50,11 @@ if csv_file:
 
                 # Convert the chart to a static image
                 img_bytes = pio.to_image(fig, format="png")
+
+                # Display the static image
                 st.image(img_bytes, caption="Chart as Image", use_column_width=True)
 
-                # Option to download the image
+                # Provide a download button for the image
                 st.download_button(
                     label="Download Image",
                     data=img_bytes,
