@@ -11,10 +11,10 @@ genai.configure(api_key=API_KEY)
 
 # Generation configuration
 generation_config = {
-    "temperature": 1,
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_output_tokens": 8192,
+    "temperature": 0.7,  # Reduced temperature to focus on more predictable outputs
+    "top_p": 0.9,        # Reduced top_p to limit diversity
+    "top_k": 40,         # Reduced top_k to limit the range of outputs
+    "max_output_tokens": 4096,  # Reduced max_output_tokens to avoid exceeding limits
     "response_mime_type": "text/plain",
 }
 
@@ -42,28 +42,14 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with chunking and retry mechanism
-def send_message_to_model(message, image_path, chunk_size=1024):
+# Function to send a message to the model
+def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    
-    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
-    responses = []
-    
-    for chunk in chunks:
-        try:
-            response = chat_session.send_message([chunk, image_input])
-            responses.append(response.text)
-        except Exception as e:
-            if 'RECITATION' in str(e):
-                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
-                return send_message_to_model(message, image_path, chunk_size // 2)
-            else:
-                raise e
-    
-    return "".join(responses)
+    response = chat_session.send_message([message, image_input])
+    return response.text
 
 # Streamlit app
 def main():
@@ -87,7 +73,7 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements, including any gradients present."
+                prompt = "Describe this UI with essential details only, focusing on layout, main elements, colors, and gradients."
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -100,7 +86,12 @@ def main():
         if st.button("Generate HTML"):
             try:
                 st.write("🛠️ Generating HTML...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Use appropriate HTML5 semantic elements and structure. Ensure the layout is responsive and follows best practices for {framework}. Do not include any CSS. Here is the refined description: {description}"
+                html_prompt = (
+                    f"Create the HTML structure based on the following UI description. "
+                    f"Focus on key elements, layout, and responsiveness using {framework}. "
+                    f"Avoid generating unnecessary details. "
+                    f"Here is the description: {description}"
+                )
                 html_code = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['html_code'] = html_code
                 st.code(html_code, language='html')
@@ -113,7 +104,11 @@ def main():
         if st.button("Generate CSS"):
             try:
                 st.write("🎨 Generating CSS...")
-                css_prompt = f"Generate the CSS code to style the HTML structure for the UI. Ensure that colors, gradients, padding, margins, fonts, and other relevant styling are correctly implemented. Use {framework} for responsiveness. Here is the refined description: {description}"
+                css_prompt = (
+                    f"Generate the CSS code to style the HTML structure. "
+                    f"Ensure colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
+                    f"Use {framework} for responsiveness."
+                )
                 css_code = send_message_to_model(css_prompt, temp_image_path)
                 st.session_state['css_code'] = css_code
                 st.code(css_code, language='css')
