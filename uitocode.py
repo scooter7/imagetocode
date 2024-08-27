@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 2048,  # Reduced to help manage chunking
+    "max_output_tokens": 1024,  # Further reduced to manage token limits
     "response_mime_type": "text/plain",
 }
 
@@ -40,8 +40,8 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with chunking
-def send_message_to_model(message, image_path, chunk_size=2048):
+# Function to send a message to the model with chunking and retry mechanism
+def send_message_to_model(message, image_path, chunk_size=1024):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
@@ -51,8 +51,15 @@ def send_message_to_model(message, image_path, chunk_size=2048):
     responses = []
     
     for chunk in chunks:
-        response = chat_session.send_message([chunk, image_input])
-        responses.append(response.text)
+        try:
+            response = chat_session.send_message([chunk, image_input])
+            responses.append(response.text)
+        except Exception as e:
+            if 'RECITATION' in str(e):
+                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
+                return send_message_to_model(message, image_path, chunk_size // 2)
+            else:
+                raise e
     
     return "".join(responses)
 
