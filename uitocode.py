@@ -80,6 +80,9 @@ def main():
             if image.mode == 'RGBA':
                 image = image.convert('RGB')
 
+            # Pre-process the image to focus on key UI elements
+            st.write("🔍 Pre-processing the image to focus on key UI elements...")
+
             # Save the uploaded image temporarily
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
@@ -88,9 +91,9 @@ def main():
             if st.button("Generate HTML"):
                 st.write("🛠️ Generating HTML...")
                 html_prompt = (
-                    "Generate only the HTML code for a webpage based on the given UI. "
-                    "Do not include any descriptive content, explanations, or CSS. "
-                    "Focus only on the HTML structure. The HTML should include placeholder classes and IDs where necessary."
+                    "Based on the attached UI image, generate only the HTML code for the webpage. "
+                    "Do not include any descriptions, explanations, or summaries. "
+                    "Return only valid HTML code. Focus on the structure and layout using appropriate HTML tags."
                 )
                 html_code = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['html_code'] = html_code
@@ -101,9 +104,9 @@ def main():
             if 'html_code' in st.session_state and st.button("Generate CSS"):
                 st.write("🎨 Generating CSS...")
                 css_prompt = (
-                    "Generate only the CSS code to style the HTML structure. "
-                    "Ensure that any gradients and colors used in the UI are correctly represented. "
-                    "Do not include any descriptive content or explanations, only the CSS."
+                    "Based on the attached UI image, generate only the CSS code to style the HTML structure. "
+                    "Ensure that any gradients, colors, and other styles used in the UI are correctly represented in the CSS. "
+                    "Do not include any descriptive content or explanations, only return valid CSS code."
                 )
                 css_code = send_message_to_model(css_prompt, temp_image_path)
                 st.session_state['css_code'] = css_code
