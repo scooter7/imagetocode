@@ -113,10 +113,13 @@ def main():
                 html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within a separate CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Here is the refined description: {refined_description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
                 st.session_state['initial_html'] = initial_html
-                
-                # Split HTML and CSS
-                html_code, css_code = initial_html.split("<style>", 1)
-                css_code = css_code.replace("</style>", "")
+
+                if "<style>" in initial_html and "</style>" in initial_html:
+                    html_code, css_code = initial_html.split("<style>", 1)
+                    css_code = css_code.replace("</style>", "")
+                else:
+                    html_code = initial_html
+                    css_code = "/* No CSS found in the model's response */"
 
                 st.code(html_code, language='html')
                 st.code(css_code, language='css')
