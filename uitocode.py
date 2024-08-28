@@ -65,7 +65,8 @@ def generate_html_section(section_description, section_name):
     prompt = (
         f"Generate the HTML for the {section_name} section based on the following description: {section_description}. "
         f"Ensure the HTML is clean, properly structured, and ready for use. "
-        f"Include only the HTML code, without any comments or code blocks like ```html."
+        f"Do not include any comments or code blocks like ```html. "
+        f"Return only the valid HTML code with proper opening and closing tags."
     )
     html_section = send_message_to_model(prompt)
     return html_section
@@ -75,7 +76,8 @@ def generate_css_for_page(full_html):
     prompt = (
         "Extract and generate the CSS for the following HTML. "
         "Ensure all styles are correctly applied and formatted. "
-        "Return only the CSS code, without any comments or code blocks like ```css."
+        "Do not include any comments or code blocks like ```css. "
+        "Return only the valid CSS code."
     )
     css_content = send_message_to_model(prompt)
     return css_content
