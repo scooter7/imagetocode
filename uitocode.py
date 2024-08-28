@@ -100,23 +100,22 @@ def main():
                 # Generate HTML and CSS separately
                 html_content, css_content = generate_html_and_css(refined_description, temp_image_path)
 
+                # Store the generated content in session state
+                st.session_state['html_content'] = html_content
+                st.session_state['css_content'] = css_content
+
                 st.code(html_content, language='html')
                 if css_content:
                     st.code(css_content, language='css')
 
-                # Save the HTML and CSS to separate files
-                with open("index.html", "w") as html_file:
-                    html_file.write(html_content)
-                if css_content:
-                    with open("styles.css", "w") as css_file:
-                        css_file.write(css_content)
-                
                 st.success("HTML and CSS files have been created.")
 
-                # Provide download links for HTML and CSS
-                st.download_button(label="Download HTML", data=html_content, file_name="index.html", mime="text/html")
-                if css_content:
-                    st.download_button(label="Download CSS", data=css_content, file_name="styles.css", mime="text/css")
+            # Provide download links for HTML and CSS if they exist in session state
+            if 'html_content' in st.session_state:
+                st.download_button(label="Download HTML", data=st.session_state['html_content'], file_name="index.html", mime="text/html")
+            if 'css_content' in st.session_state:
+                st.download_button(label="Download CSS", data=st.session_state['css_content'], file_name="styles.css", mime="text/css")
+
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
