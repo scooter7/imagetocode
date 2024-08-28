@@ -74,6 +74,16 @@ def generate_detailed_section(section_description, html_content, temp_image_path
     section_content = send_message_to_model(detailed_prompt, temp_image_path)
     return section_content
 
+# Function to extract and combine CSS
+def extract_and_combine_css(html_content, temp_image_path):
+    css_prompt = (
+        f"Extract all CSS from the following HTML code and combine it into a single CSS file. "
+        f"Ensure that all styles, including gradients, borders, shadows, and fonts, are included. "
+        f"Avoid using ```css. Here is the HTML code: {html_content}"
+    )
+    css_content = send_message_to_model(css_prompt, temp_image_path)
+    return css_content
+
 # Streamlit app
 def main():
     st.title("Gemini 1.5 Pro, UI to Code 👨‍💻 ")
@@ -131,16 +141,24 @@ def main():
                     section_content = generate_detailed_section(section, detailed_html, temp_image_path)
                     detailed_html += section_content
 
+                # Combine CSS into a single file
+                st.write("🛠️ Extracting and combining CSS...")
+                combined_css = extract_and_combine_css(detailed_html, temp_image_path)
+
                 # Store the generated content in session state
                 st.session_state['html_content'] = detailed_html
+                st.session_state['css_content'] = combined_css
 
                 st.code(detailed_html, language='html')
+                st.code(combined_css, language='css')
 
                 st.success("HTML and CSS files have been created.")
 
             # Provide download links for HTML and CSS if they exist in session state
             if 'html_content' in st.session_state:
                 st.download_button(label="Download HTML", data=st.session_state['html_content'], file_name="index.html", mime="text/html")
+            if 'css_content' in st.session_state:
+                st.download_button(label="Download CSS", data=st.session_state['css_content'], file_name="styles.css", mime="text/css")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
