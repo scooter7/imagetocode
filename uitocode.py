@@ -19,7 +19,6 @@ generation_config = {
 }
 
 # Safety settings
-# These are the same as previous:
 safety_settings = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -43,8 +42,8 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with chunking
-def send_message_to_model(message, image_path=None, chunk_size=1024):
+# Function to send a message to the model with dynamic chunking strategy
+def send_message_to_model(message, image_path=None, chunk_size=2048):
     image_input = None
     if image_path:
         image_input = {
@@ -65,8 +64,12 @@ def send_message_to_model(message, image_path=None, chunk_size=1024):
             responses.append(response.text)
         except Exception as e:
             if 'RECITATION' in str(e):
-                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
-                return send_message_to_model(message, image_path, chunk_size // 2)
+                if chunk_size > 512:
+                    st.warning(f"Recitation error occurred. Retrying with smaller chunk size: {chunk_size // 2}...")
+                    return send_message_to_model(message, image_path, chunk_size // 2)
+                else:
+                    st.error("Recitation error occurred even with the smallest chunk size. Please simplify your request.")
+                    return ""
             else:
                 raise e
     
@@ -95,14 +98,7 @@ def main():
             if st.button("Analyze UI"):
                 st.write("🔍 Analyzing your UI in detail...")
                 prompt = (
-                    "Analyze the attached UI image thoroughly. "
-                    "Provide a comprehensive breakdown of the UI, including: "
-                    "1. A detailed description of the layout structure, including headers, footers, main sections, and any sidebars. "
-                    "2. Identification and description of all UI components (e.g., buttons, text fields, images) with their bounding boxes in the format: [object name (y_min, x_min, y_max, x_max)]. "
-                    "3. A detailed description of the color scheme used, including specific colors and gradients, with exact color codes where possible. "
-                    "4. An explanation of any typography used, including font families, sizes, and styles. "
-                    "5. An assessment of the spacing, padding, and margin strategies used throughout the UI. "
-                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors."
+                    "Analyze the attached UI image. Provide a detailed description of the layout structure, UI components, color scheme, typography, spacing, and interactive elements."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
@@ -118,7 +114,7 @@ def main():
                 st.write("🛠️ Generating detailed HTML...")
                 html_prompt = (
                     f"Generate a complete HTML structure based on the following UI description. "
-                    f"Ensure that all UI elements mentioned in the description are included, with proper semantic HTML5 tags. "
+                    f"Include all UI elements with proper semantic HTML5 tags. "
                     f"Use Bootstrap classes for layout and structure. "
                     f"Here is the description: {description}"
                 )
