@@ -40,19 +40,15 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with chunking strategy
+# Function to send a message to the model with manual chunking
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-    response = chat_session.send_message([message, image_input])
 
-    # Implement chunking if the response is too large
-    if response.finish_reason == 'RECITATION':
-        chunks = [response.text[i:i+2000] for i in range(0, len(response.text), 2000)]
-        return ''.join(chunks)
-    
+    # Send the message and get the response
+    response = chat_session.send_message([message, image_input])
     return response.text
 
 # Function to generate HTML and CSS separately
