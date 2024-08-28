@@ -60,16 +60,16 @@ def analyze_image_and_generate_description(image_path):
     description = send_message_to_model(prompt, image_path)
     return description
 
-# Function to generate HTML for a specific section
-def generate_html_section(section_description, section_name):
+# Function to generate the full HTML document
+def generate_full_html(description):
     prompt = (
-        f"Generate the HTML for the {section_name} section based on the following description: {section_description}. "
-        f"Ensure the HTML is clean, properly structured, and ready for use. "
-        f"Do not include any comments or code blocks like ```html. "
-        f"Return only the valid HTML code with proper opening and closing tags."
+        "Based on the following description, generate a full HTML5 document. "
+        "Ensure the document includes a DOCTYPE declaration, and proper opening and closing tags for <html>, <head>, and <body>. "
+        "The HTML should be well-structured, clean, and ready for use: "
+        f"{description}"
     )
-    html_section = send_message_to_model(prompt)
-    return html_section
+    full_html = send_message_to_model(prompt)
+    return full_html
 
 # Function to generate CSS for the entire page
 def generate_css_for_page(full_html):
@@ -108,12 +108,8 @@ def main():
                 description = analyze_image_and_generate_description(temp_image_path)
                 st.write(description)
 
-                st.write("Generating HTML sections...")
-                header_html = generate_html_section(description, "header")
-                main_content_html = generate_html_section(description, "main content")
-                footer_html = generate_html_section(description, "footer")
-
-                full_html = header_html + main_content_html + footer_html
+                st.write("Generating full HTML document...")
+                full_html = generate_full_html(description)
 
                 st.write("Generating CSS...")
                 combined_css = generate_css_for_page(full_html)
