@@ -4,6 +4,7 @@ from PIL import Image
 import google.generativeai as genai
 import zipfile
 import io
+import re
 
 # Configure the API key from Streamlit secrets
 API_KEY = st.secrets["gemini_api_key"]
@@ -43,7 +44,7 @@ model = genai.GenerativeModel(
 chat_session = model.start_chat(history=[])
 
 # Function to send a message to the model with dynamic chunking strategy
-def send_message_to_model(message, image_path=None, chunk_size=2048):
+def send_message_to_model(message, image_path=None, chunk_size=1024):
     image_input = None
     if image_path:
         image_input = {
@@ -75,6 +76,14 @@ def send_message_to_model(message, image_path=None, chunk_size=2048):
     
     return "".join(responses)
 
+# Function to clean up the code by removing comments and non-code content
+def clean_code(code):
+    # Remove HTML comments
+    code = re.sub(r'<!--.*?-->', '', code, flags=re.DOTALL)
+    # Remove CSS comments
+    code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
+    return code.strip()
+
 # Function to generate HTML for specific UI sections based on the analysis
 def generate_html_from_analysis(description):
     sections = [
@@ -89,15 +98,15 @@ def generate_html_from_analysis(description):
     for section in sections:
         st.write(f"Generating HTML for {section}...")
         prompt = (
-            f"Based on the following UI analysis, generate HTML for the {section}. "
-            f"Ensure that all relevant UI elements are included and use proper semantic HTML5 tags. "
-            f"Use Bootstrap classes for layout and structure. "
+            f"Generate HTML for the {section} based on the following UI analysis. "
+            f"Use semantic HTML5 tags and Bootstrap classes for layout. "
             f"Do not include any comments, explanations, or non-code content. "
             f"UI analysis: {description}"
         )
         html_part = send_message_to_model(prompt)
-        html_parts.append(html_part)
-        st.code(html_part, language='html')
+        clean_html = clean_code(html_part)
+        html_parts.append(clean_html)
+        st.code(clean_html, language='html')
     
     return "\n".join(html_parts)
 
@@ -105,13 +114,13 @@ def generate_html_from_analysis(description):
 def generate_css_from_html(html_code):
     st.write("Generating CSS for the provided HTML...")
     prompt = (
-        f"Generate CSS to style the following HTML structure. "
-        f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
-        f"Use Bootstrap's classes where applicable. "
-        f"Do not include any comments, explanations, or non-code content. "
-        f"HTML structure: {html_code}"
+        f"Generate CSS to style the following HTML. "
+        f"Include styling for colors, gradients, padding, margins, and fonts. "
+        f"Do not include any comments or explanations. "
+        f"HTML: {html_code}"
     )
-    return send_message_to_model(prompt)
+    css_code = send_message_to_model(prompt)
+    return clean_code(css_code)
 
 # Streamlit app
 def main():
@@ -137,13 +146,7 @@ def main():
                 st.write("🔍 Analyzing your UI in detail...")
                 prompt = (
                     "Analyze the attached UI image thoroughly. "
-                    "Provide a comprehensive breakdown of the UI, including: "
-                    "1. A detailed description of the layout structure, including headers, footers, main sections, and any sidebars. "
-                    "2. Identification and description of all UI components (e.g., buttons, text fields, images) with their bounding boxes in the format: [object name (y_min, x_min, y_max, x_max)]. "
-                    "3. A detailed description of the color scheme used, including specific colors and gradients, with exact color codes where possible. "
-                    "4. An explanation of any typography used, including font families, sizes, and styles. "
-                    "5. An assessment of the spacing, padding, and margin strategies used throughout the UI. "
-                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors."
+                    "Provide a detailed description of the layout, UI components, colors, typography, spacing, and interactions."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
@@ -200,7 +203,7 @@ def main():
                 revised_html_css = send_message_to_model(revision_prompt)
                 
                 # Save the revised HTML and CSS files in memory
-                revised_html_bytes = revised_html_css.encode('utf-8')
+                revised_html_bytes = clean_code(revised_html_css).encode('utf-8')
                 in_memory_zip = io.BytesIO()
                 with zipfile.ZipFile(in_memory_zip, "w") as zf:
                     zf.writestr("revised_index.html", revised_html_bytes)
