@@ -75,6 +75,42 @@ def send_message_to_model(message, image_path=None, chunk_size=2048):
     
     return "".join(responses)
 
+# Function to generate HTML for specific UI sections based on the analysis
+def generate_html_from_analysis(description):
+    sections = [
+        "header",
+        "footer",
+        "main content",
+        "sidebar",
+        "interactive elements"
+    ]
+    html_parts = []
+
+    for section in sections:
+        st.write(f"Generating HTML for {section}...")
+        prompt = (
+            f"Based on the following UI analysis, generate HTML for the {section}. "
+            f"Ensure that all relevant UI elements are included and use proper semantic HTML5 tags. "
+            f"Use Bootstrap classes for layout and structure. "
+            f"UI analysis: {description}"
+        )
+        html_part = send_message_to_model(prompt)
+        html_parts.append(html_part)
+        st.code(html_part, language='html')
+    
+    return "\n".join(html_parts)
+
+# Function to generate CSS for the HTML
+def generate_css_from_html(html_code):
+    st.write("Generating CSS for the provided HTML...")
+    prompt = (
+        f"Generate CSS to style the following HTML structure. "
+        f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
+        f"Use Bootstrap's classes where applicable. "
+        f"HTML structure: {html_code}"
+    )
+    return send_message_to_model(prompt)
+
 # Streamlit app
 def main():
     st.title("UI to Code 👨‍💻 ")
@@ -94,11 +130,18 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate robust UI analysis
+            # Generate detailed UI analysis
             if st.button("Analyze UI"):
                 st.write("🔍 Analyzing your UI in detail...")
                 prompt = (
-                    "Analyze the attached UI image. Provide a detailed description of the layout structure, UI components, color scheme, typography, spacing, and interactive elements."
+                    "Analyze the attached UI image thoroughly. "
+                    "Provide a comprehensive breakdown of the UI, including: "
+                    "1. A detailed description of the layout structure, including headers, footers, main sections, and any sidebars. "
+                    "2. Identification and description of all UI components (e.g., buttons, text fields, images) with their bounding boxes in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "3. A detailed description of the color scheme used, including specific colors and gradients, with exact color codes where possible. "
+                    "4. An explanation of any typography used, including font families, sizes, and styles. "
+                    "5. An assessment of the spacing, padding, and margin strategies used throughout the UI. "
+                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
@@ -112,15 +155,8 @@ def main():
         if st.button("Generate HTML"):
             try:
                 st.write("🛠️ Generating detailed HTML...")
-                html_prompt = (
-                    f"Generate a complete HTML structure based on the following UI description. "
-                    f"Include all UI elements with proper semantic HTML5 tags. "
-                    f"Use Bootstrap classes for layout and structure. "
-                    f"Here is the description: {description}"
-                )
-                html_code = send_message_to_model(html_prompt)
+                html_code = generate_html_from_analysis(description)
                 st.session_state['html_code'] = html_code
-                st.code(html_code, language='html')
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
@@ -129,14 +165,7 @@ def main():
         html_code = st.session_state['html_code']
         if st.button("Generate CSS"):
             try:
-                st.write("🎨 Generating CSS...")
-                css_prompt = (
-                    f"Generate CSS to style the following HTML structure. "
-                    f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
-                    f"Use Bootstrap's classes where applicable. "
-                    f"Here is the HTML structure: {html_code}"
-                )
-                css_code = send_message_to_model(css_prompt)
+                css_code = generate_css_from_html(html_code)
                 st.session_state['css_code'] = css_code
                 st.code(css_code, language='css')
 
