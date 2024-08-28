@@ -38,12 +38,15 @@ model = genai.GenerativeModel(
 chat_session = model.start_chat(history=[])
 
 # Function to send a message to the model
-def send_message_to_model(message, image_path):
-    image_input = {
-        'mime_type': 'image/jpeg',
-        'data': pathlib.Path(image_path).read_bytes()
-    }
-    response = chat_session.send_message([message, image_input])
+def send_message_to_model(message, image_path=None):
+    if image_path:
+        image_input = {
+            'mime_type': 'image/jpeg',
+            'data': pathlib.Path(image_path).read_bytes()
+        }
+        response = chat_session.send_message([message, image_input])
+    else:
+        response = chat_session.send_message([message])
     return response.text
 
 # Function to analyze the image and generate a description of the UI components
@@ -64,7 +67,7 @@ def generate_html_section(section_description, section_name):
         f"Ensure the HTML is clean, properly structured, and ready for use. "
         f"Include only the HTML code, without any comments or code blocks like ```html."
     )
-    html_section = send_message_to_model(prompt, image_path=None)
+    html_section = send_message_to_model(prompt)
     return html_section
 
 # Function to generate CSS for the entire page
@@ -74,7 +77,7 @@ def generate_css_for_page(full_html):
         "Ensure all styles are correctly applied and formatted. "
         "Return only the CSS code, without any comments or code blocks like ```css."
     )
-    css_content = send_message_to_model(prompt, image_path=None)
+    css_content = send_message_to_model(prompt)
     return css_content
 
 # Streamlit app
