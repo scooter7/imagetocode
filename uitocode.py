@@ -2,22 +2,17 @@ import streamlit as st
 import pathlib
 from PIL import Image
 import google.generativeai as genai
-import zipfile
-import io
-import re
-from bs4 import BeautifulSoup
-import cssutils
 
-# Configure the API key from Streamlit secrets
-API_KEY = st.secrets["gemini_api_key"]
+# Configure the API key directly in the script
+API_KEY = 'YOUR KEY'
 genai.configure(api_key=API_KEY)
 
 # Generation configuration
 generation_config = {
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "top_k": 40,
-    "max_output_tokens": 4096,
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_output_tokens": 8192,
     "response_mime_type": "text/plain",
 }
 
@@ -33,7 +28,7 @@ safety_settings = [
 MODEL_NAME = "gemini-1.5-pro-latest"
 
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
-framework = "Bootstrap"
+framework = "Regular CSS use flex grid etc"  # Change this to "Bootstrap" or any other framework as needed
 
 # Create the model
 model = genai.GenerativeModel(
@@ -45,168 +40,70 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with dynamic chunking strategy
-def send_message_to_model(message, image_path=None, chunk_size=1024):
-    image_input = None
-    if image_path:
-        image_input = {
-            'mime_type': 'image/jpeg',
-            'data': pathlib.Path(image_path).read_bytes()
-        }
+# Function to send a message to the model
+def send_message_to_model(message, image_path):
+    image_input = {
+        'mime_type': 'image/jpeg',
+        'data': pathlib.Path(image_path).read_bytes()
+    }
+    response = chat_session.send_message([message, image_input])
+    return response.text
 
-    # Split the message into chunks
-    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
-    responses = []
-    
-    for chunk in chunks:
-        try:
-            if image_input:
-                response = chat_session.send_message([chunk, image_input])
-            else:
-                response = chat_session.send_message([chunk])
-            responses.append(response.text)
-        except Exception as e:
-            if 'RECITATION' in str(e):
-                if chunk_size > 512:
-                    st.warning(f"Recitation error occurred. Retrying with smaller chunk size: {chunk_size // 2}...")
-                    return send_message_to_model(message, image_path, chunk_size // 2)
-                else:
-                    st.error("Recitation error occurred even with the smallest chunk size. Please simplify your request.")
-                    return ""
-            else:
-                raise e
-    
-    return "".join(responses)
-
-# Enhanced cleaning function
-def clean_code(code):
-    code = re.sub(r'<!--.*?-->', '', code, flags=re.DOTALL)
-    code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
-    code = re.sub(r'[^{}<>:;\.\#\-\w\s\n\(\)\[\]\=\"]+', '', code)
-    code = re.sub(r'\s+', ' ', code).strip()
-    return code
-
-# HTML validation and formatting
-def validate_and_format_html(html_code):
-    soup = BeautifulSoup(html_code, 'html.parser')
-    formatted_html = soup.prettify()
-    return formatted_html
-
-# CSS validation and formatting
-def validate_and_format_css(css_code):
-    parser = cssutils.CSSParser(raiseExceptions=True)
-    sheet = parser.parseString(css_code)
-    return sheet.cssText.decode('utf-8')
-
-# Function to generate HTML from the analysis
-def generate_html_from_analysis(description):
-    sections = [
-        "header",
-        "footer",
-        "main content",
-        "sidebar",
-        "interactive elements"
-    ]
-    html_parts = []
-
-    for section in sections:
-        st.write(f"Generating HTML for {section}...")
-        prompt = (
-            f"Generate HTML for the {section} based on the following UI analysis. "
-            f"Use semantic HTML5 tags and Bootstrap classes for layout. "
-            f"Only include div structure, colors, fonts, gradients, and HTML elements. "
-            f"Do not include any qualitative analysis, comments, explanations, or non-code content. "
-            f"UI analysis: {description}"
-        )
-        html_part = send_message_to_model(prompt)
-        clean_html = clean_code(html_part)
-        html_parts.append(clean_html)
-        st.code(clean_html, language='html')
-    
-    return "\n".join(html_parts)
-
-# Function to generate CSS for the HTML
-def generate_css_from_html(html_code):
-    st.write("Generating CSS for the provided HTML...")
-    prompt = (
-        f"Generate CSS to style the following HTML. "
-        f"Include styling for colors, gradients, padding, margins, and fonts. "
-        f"Do not include any comments or explanations. "
-        f"HTML: {html_code}"
-    )
-    css_code = send_message_to_model(prompt)
-    return clean_code(css_code)
-
-# Integration with your app
+# Streamlit app
 def main():
-    st.title("UI to Code 👨‍💻 ")
+    st.title("Gemini 1.5 Pro, UI to Code 👨‍💻 ")
+    st.subheader('Made with ❤️ by [Skirano](https://x.com/skirano)')
+
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
         try:
+            # Load and display the image
             image = Image.open(uploaded_file)
             st.image(image, caption='Uploaded Image.', use_column_width=True)
 
+            # Convert image to RGB mode if it has an alpha channel
             if image.mode == 'RGBA':
                 image = image.convert('RGB')
 
+            # Save the uploaded image temporarily
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            if st.button("Analyze UI"):
-                st.write("🔍 Analyzing your UI in detail...")
-                prompt = (
-                    "Analyze the attached UI image thoroughly. "
-                    "Provide a detailed description of the div structure, UI components, colors, typography, spacing, gradients, and HTML elements. "
-                    "Do not include any qualitative analysis or best practice recommendations."
-                )
+            # Generate UI description
+            if st.button("Code UI"):
+                st.write("🧑‍💻 Looking at your UI...")
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
                 description = send_message_to_model(prompt, temp_image_path)
-                st.session_state['description'] = description
                 st.write(description)
 
+                # Refine the description
+                st.write("🔍 Refining description with visual comparison...")
+                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
+                refined_description = send_message_to_model(refine_prompt, temp_image_path)
+                st.write(refined_description)
+
+                # Generate HTML
+                st.write("🛠️ Generating website...")
+                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                initial_html = send_message_to_model(html_prompt, temp_image_path)
+                st.code(initial_html, language='html')
+
+                # Refine HTML
+                st.write("🔧 Refining website...")
+                refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
+                refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
+                st.code(refined_html, language='html')
+
+                # Save the refined HTML to a file
+                with open("index.html", "w") as file:
+                    file.write(refined_html)
+                st.success("HTML file 'index.html' has been created.")
+
+                # Provide download link for HTML
+                st.download_button(label="Download HTML", data=refined_html, file_name="index.html", mime="text/html")
         except Exception as e:
             st.error(f"An error occurred: {e}")
-
-    if 'description' in st.session_state:
-        description = st.session_state['description']
-        if st.button("Generate HTML"):
-            try:
-                st.write("🛠️ Generating detailed HTML...")
-                html_code = generate_html_from_analysis(description)
-                html_code = clean_code(html_code)
-                html_code = validate_and_format_html(html_code)
-                st.session_state['html_code'] = html_code
-                st.code(html_code, language='html')
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    if 'html_code' in st.session_state:
-        html_code = st.session_state['html_code']
-        if st.button("Generate CSS"):
-            try:
-                css_code = generate_css_from_html(html_code)
-                css_code = clean_code(css_code)
-                css_code = validate_and_format_css(css_code)
-                st.session_state['css_code'] = css_code
-                st.code(css_code, language='css')
-
-                html_bytes = html_code.encode('utf-8')
-                css_bytes = css_code.encode('utf-8')
-                in_memory_zip = io.BytesIO()
-                with zipfile.ZipFile(in_memory_zip, "w") as zf:
-                    zf.writestr("index.html", html_bytes)
-                    zf.writestr("style.css", css_bytes)
-                in_memory_zip.seek(0)
-
-                st.success("HTML and CSS files have been created.")
-
-                st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
-
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    # Optional Revision Step remains the same
 
 if __name__ == "__main__":
     main()
