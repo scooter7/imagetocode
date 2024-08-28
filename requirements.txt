@@ -1,6 +1,3 @@
 streamlit
 Pillow
 google-generativeai
-beautifulsoup4
-lxml
-cssutils
