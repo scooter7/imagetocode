@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
+    "max_output_tokens": 2048,  # Reduced to avoid recitation issues
     "response_mime_type": "text/plain",
 }
 
@@ -49,11 +49,23 @@ def send_message_to_model(message, image_path):
     response = chat_session.send_message([message, image_input])
 
     # Implement chunking if the response is too large
-    if len(response.text) > 8000:
-        chunks = [response.text[i:i+8000] for i in range(0, len(response.text), 8000)]
+    if response.finish_reason == 'RECITATION':
+        chunks = [response.text[i:i+2000] for i in range(0, len(response.text), 2000)]
         return ''.join(chunks)
     
     return response.text
+
+# Function to generate HTML and CSS separately
+def generate_html_and_css(refined_description, temp_image_path):
+    # Generate HTML
+    html_prompt = f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
+    html_content = send_message_to_model(html_prompt, temp_image_path)
+
+    # Generate CSS separately if needed
+    css_prompt = f"Extract the CSS from the following HTML code and provide it as a separate CSS file. The CSS should use Bootstrap classes and custom styles as necessary. Avoid using ```css. Here is the HTML code: {html_content}"
+    css_content = send_message_to_model(css_prompt, temp_image_path)
+
+    return html_content, css_content
 
 # Streamlit app
 def main():
@@ -89,18 +101,8 @@ def main():
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.write(refined_description)
 
-                # Generate HTML and CSS
-                st.write("🛠️ Generating website...")
-                html_prompt = f"Create separate HTML and CSS files based on the following UI description, using the UI elements described in the previous response. Include Bootstrap CSS within the CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html or ```css. Here is the refined description: {refined_description}"
-                initial_html = send_message_to_model(html_prompt, temp_image_path)
-
-                # Check for <style> tags and separate HTML and CSS content if present
-                if "<style>" in initial_html and "</style>" in initial_html:
-                    html_content = initial_html.split('<style>')[0]
-                    css_content = initial_html.split('<style>')[1].replace('</style>', '')
-                else:
-                    html_content = initial_html
-                    css_content = ""  # If no CSS is provided, leave this empty
+                # Generate HTML and CSS separately
+                html_content, css_content = generate_html_and_css(refined_description, temp_image_path)
 
                 st.code(html_content, language='html')
                 if css_content:
