@@ -58,7 +58,7 @@ def generate_structure(refined_description, temp_image_path):
         f"Create a high-level HTML structure based on the following UI description. "
         f"Ensure all major sections (header, footer, main content, sidebar) are included. "
         f"Do not include any detailed CSS styles at this stage, just the structure. "
-        f"Here is the refined description: {refined_description}"
+        f"Return the HTML code only. Do not include any comments, explanations, or code blocks like ```html."
     )
     html_content = send_message_to_model(html_prompt, temp_image_path)
     return html_content
@@ -69,7 +69,7 @@ def generate_detailed_section(section_description, html_content, temp_image_path
     detailed_prompt = (
         f"Using the following HTML structure, generate the detailed HTML and CSS for the {section_description}. "
         f"Ensure all design elements such as gradients, borders, shadows, and fonts are captured. "
-        f"Here is the HTML structure: {html_content}"
+        f"Return only the HTML and CSS code. Do not include any comments, explanations, or code blocks like ```css or ```html."
     )
     section_content = send_message_to_model(detailed_prompt, temp_image_path)
     return section_content
@@ -79,7 +79,7 @@ def extract_and_combine_css(html_content, temp_image_path):
     css_prompt = (
         f"Extract all CSS from the following HTML code and combine it into a single CSS file. "
         f"Ensure that all styles, including gradients, borders, shadows, and fonts, are included. "
-        f"Avoid using ```css. Here is the HTML code: {html_content}"
+        f"Return only the CSS code. Do not include any comments, explanations, or code blocks like ```css."
     )
     css_content = send_message_to_model(css_prompt, temp_image_path)
     return css_content
