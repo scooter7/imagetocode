@@ -43,12 +43,15 @@ model = genai.GenerativeModel(
 chat_session = model.start_chat(history=[])
 
 # Function to send a message to the model
-def send_message_to_model(message, image_path):
-    image_input = {
-        'mime_type': 'image/jpeg',
-        'data': pathlib.Path(image_path).read_bytes()
-    }
-    response = chat_session.send_message([message, image_input])
+def send_message_to_model(message, image_path=None):
+    if image_path:
+        image_input = {
+            'mime_type': 'image/jpeg',
+            'data': pathlib.Path(image_path).read_bytes()
+        }
+        response = chat_session.send_message([message, image_input])
+    else:
+        response = chat_session.send_message([message])
     return response.text
 
 # Streamlit app
@@ -126,6 +129,33 @@ def main():
 
                 # Provide download link for the zip file
                 st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
+
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+
+        # Optional Revision Step
+        revision_instructions = st.text_area("Enter revision instructions (optional):", "")
+        if revision_instructions and st.button("Apply Revision"):
+            try:
+                st.write("🔧 Applying revision...")
+                revision_prompt = (
+                    f"Revise the HTML and CSS based on the following instructions: {revision_instructions}. "
+                    f"Ensure that the HTML and CSS match the new requirements."
+                )
+                revised_html_css = send_message_to_model(revision_prompt)
+                
+                # Save the revised HTML and CSS files in memory
+                revised_html_bytes = revised_html_css.encode('utf-8')
+                in_memory_zip = io.BytesIO()
+                with zipfile.ZipFile(in_memory_zip, "w") as zf:
+                    zf.writestr("revised_index.html", revised_html_bytes)
+                    zf.writestr("revised_style.css", revised_html_bytes)
+                in_memory_zip.seek(0)
+
+                st.success("Revised HTML and CSS files have been created.")
+
+                # Provide download link for the revised zip file
+                st.download_button(label="Download Revised ZIP", data=in_memory_zip, file_name="revised_web_files.zip", mime="application/zip")
 
             except Exception as e:
                 st.error(f"An error occurred: {e}")
