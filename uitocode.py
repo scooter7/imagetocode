@@ -93,24 +93,32 @@ def main():
                 st.write("🛠️ Generating website...")
                 html_prompt = f"Create separate HTML and CSS files based on the following UI description, using the UI elements described in the previous response. Include Bootstrap CSS within the CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html or ```css. Here is the refined description: {refined_description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
-                
-                # Separate HTML and CSS content
-                html_content, css_content = initial_html.split('<style>')[0], initial_html.split('<style>')[1].replace('</style>', '')
+
+                # Check for <style> tags and separate HTML and CSS content if present
+                if "<style>" in initial_html and "</style>" in initial_html:
+                    html_content = initial_html.split('<style>')[0]
+                    css_content = initial_html.split('<style>')[1].replace('</style>', '')
+                else:
+                    html_content = initial_html
+                    css_content = ""  # If no CSS is provided, leave this empty
 
                 st.code(html_content, language='html')
-                st.code(css_content, language='css')
+                if css_content:
+                    st.code(css_content, language='css')
 
                 # Save the HTML and CSS to separate files
                 with open("index.html", "w") as html_file:
                     html_file.write(html_content)
-                with open("styles.css", "w") as css_file:
-                    css_file.write(css_content)
+                if css_content:
+                    with open("styles.css", "w") as css_file:
+                        css_file.write(css_content)
                 
                 st.success("HTML and CSS files have been created.")
 
                 # Provide download links for HTML and CSS
                 st.download_button(label="Download HTML", data=html_content, file_name="index.html", mime="text/html")
-                st.download_button(label="Download CSS", data=css_content, file_name="styles.css", mime="text/css")
+                if css_content:
+                    st.download_button(label="Download CSS", data=css_content, file_name="styles.css", mime="text/css")
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
