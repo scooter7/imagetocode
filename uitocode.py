@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 2048,  # Reduced to avoid recitation issues
+    "max_output_tokens": 2048,
     "response_mime_type": "text/plain",
 }
 
@@ -26,9 +26,6 @@ safety_settings = [
 
 # Model name
 MODEL_NAME = "gemini-1.5-pro-latest"
-
-# Framework selection
-framework = "Bootstrap"
 
 # Create the model
 model = genai.GenerativeModel(
@@ -46,25 +43,43 @@ def send_message_to_model(message, image_path):
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
-
-    # Send the message and get the response
     response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to generate and validate each section independently
-def generate_and_validate_section(section_name, image_path, existing_html=""):
-    section_prompt = (
-        f"Generate the {section_name} section of an HTML page, ensuring it is properly structured with no missing tags. "
-        f"Use Bootstrap for styling and ensure that there are no repeated elements. "
-        f"Include only the HTML code, and avoid adding any comments or code blocks like ```html. "
-        f"Here is the existing HTML content: {existing_html}"
+# Function to analyze the image and generate a description of the UI components
+def analyze_image_and_generate_description(image_path):
+    prompt = (
+        "Analyze the provided image and generate a detailed description of all UI components. "
+        "Ensure to include all sections like headers, footers, navigation bars, sidebars, buttons, forms, and any other significant elements. "
+        "For each component, describe its layout, color, text, and any interactive elements. "
+        "Provide this information in a format that can be used to generate clean and structured HTML and CSS code."
     )
-    section_html = send_message_to_model(section_prompt, image_path)
-    return section_html
+    description = send_message_to_model(prompt, image_path)
+    return description
+
+# Function to generate HTML for a specific section
+def generate_html_section(section_description, section_name):
+    prompt = (
+        f"Generate the HTML for the {section_name} section based on the following description: {section_description}. "
+        f"Ensure the HTML is clean, properly structured, and ready for use. "
+        f"Include only the HTML code, without any comments or code blocks like ```html."
+    )
+    html_section = send_message_to_model(prompt, image_path=None)
+    return html_section
+
+# Function to generate CSS for the entire page
+def generate_css_for_page(full_html):
+    prompt = (
+        "Extract and generate the CSS for the following HTML. "
+        "Ensure all styles are correctly applied and formatted. "
+        "Return only the CSS code, without any comments or code blocks like ```css."
+    )
+    css_content = send_message_to_model(prompt, image_path=None)
+    return css_content
 
 # Streamlit app
 def main():
-    st.title("Gemini 1.5 Pro, UI to Code 👨‍💻 ")
+    st.title("Gemini 1.5 Pro, UI to Code 👨‍💻")
     st.subheader('Made with ❤️ by [Skirano](https://x.com/skirano)')
 
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -75,45 +90,27 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption='Uploaded Image.', use_column_width=True)
 
-            # Convert image to RGB mode if it has an alpha channel
-            if image.mode == 'RGBA':
-                image = image.convert('RGB')
-
             # Save the uploaded image temporarily
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate each section independently
-            if st.button("Generate HTML"):
-                st.write("Generating HTML...")
+            if st.button("Generate HTML and CSS"):
+                st.write("Analyzing image and generating UI description...")
+                description = analyze_image_and_generate_description(temp_image_path)
+                st.write(description)
 
-                # Generate header
-                header_html = generate_and_validate_section("header", temp_image_path)
-                st.write("Header generated.")
+                st.write("Generating HTML sections...")
+                header_html = generate_html_section(description, "header")
+                main_content_html = generate_html_section(description, "main content")
+                footer_html = generate_html_section(description, "footer")
 
-                # Generate main content
-                main_content_html = generate_and_validate_section("main content", temp_image_path, existing_html=header_html)
-                st.write("Main content generated.")
-
-                # Generate footer
-                footer_html = generate_and_validate_section("footer", temp_image_path, existing_html=main_content_html)
-                st.write("Footer generated.")
-
-                # Combine all sections
                 full_html = header_html + main_content_html + footer_html
 
-                # Store the final HTML in session state
+                st.write("Generating CSS...")
+                combined_css = generate_css_for_page(full_html)
+
+                # Store the generated content in session state
                 st.session_state['html_content'] = full_html
-
-                # Generate CSS
-                css_prompt = (
-                    "Extract all the CSS from the following HTML and generate a single, well-structured CSS file. "
-                    "Ensure all styles are included and formatted correctly. "
-                    "Return only the CSS code without any comments or code blocks like ```css."
-                )
-                combined_css = send_message_to_model(css_prompt, temp_image_path)
-
-                # Store the CSS in session state
                 st.session_state['css_content'] = combined_css
 
                 st.code(full_html, language='html')
