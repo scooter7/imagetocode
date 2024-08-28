@@ -60,12 +60,13 @@ def analyze_image_and_generate_description(image_path):
     description = send_message_to_model(prompt, image_path)
     return description
 
-# Function to generate the full HTML document
+# Function to generate the full HTML document with explicit instructions
 def generate_full_html(description):
     prompt = (
         "Based on the following description, generate a full HTML5 document. "
-        "Ensure the document includes a DOCTYPE declaration, and proper opening and closing tags for <html>, <head>, and <body>. "
-        "The HTML should be well-structured, clean, and ready for use: "
+        "Ensure the document starts with `<!DOCTYPE html>` and includes proper opening and closing tags for <html>, <head>, <body>, and </html>. "
+        "The HTML should be well-structured, clean, and ready for use. Avoid overlapping elements and ensure proper layering. "
+        "Here is the description: "
         f"{description}"
     )
     full_html = send_message_to_model(prompt)
@@ -77,7 +78,7 @@ def generate_css_for_page(full_html):
         "Extract and generate the CSS for the following HTML. "
         "Ensure all styles are correctly applied and formatted. "
         "Do not include any comments or code blocks like ```css. "
-        "Return only the valid CSS code."
+        "Return only the valid CSS code, and ensure that all layers and z-indexes are correctly handled to avoid overlap."
     )
     css_content = send_message_to_model(prompt)
     return css_content
