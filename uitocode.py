@@ -98,11 +98,11 @@ def main():
         description = st.session_state['description']
         if st.button("Generate HTML"):
             try:
-                st.write("🛠️ Generating HTML...")
+                st.write("🛠️ Generating detailed HTML...")
                 html_prompt = (
-                    f"Generate only the HTML code for the following UI. "
-                    f"Do not include any explanations, comments, or non-HTML content. "
-                    f"Use Bootstrap for layout and structure. "
+                    f"Generate a complete HTML structure based on the following UI description. "
+                    f"Ensure that all UI elements mentioned in the description are included, with proper semantic HTML5 tags. "
+                    f"Use Bootstrap classes for layout and structure. "
                     f"Here is the description: {description}"
                 )
                 html_code = send_message_to_model(html_prompt)
@@ -118,9 +118,10 @@ def main():
             try:
                 st.write("🎨 Generating CSS...")
                 css_prompt = (
-                    f"Generate only the CSS code to style the HTML structure. "
-                    f"Do not include any explanations, comments, or non-CSS content. "
-                    f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined."
+                    f"Generate CSS to style the following HTML structure. "
+                    f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
+                    f"Use Bootstrap's classes where applicable. "
+                    f"Here is the HTML structure: {html_code}"
                 )
                 css_code = send_message_to_model(css_prompt)
                 st.session_state['css_code'] = css_code
