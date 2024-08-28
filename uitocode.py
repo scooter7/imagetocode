@@ -19,6 +19,7 @@ generation_config = {
 }
 
 # Safety settings
+safety_settings are the same:
 safety_settings = [
     {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
     {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -42,17 +43,34 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
-def send_message_to_model(message, image_path=None):
+# Function to send a message to the model with chunking
+def send_message_to_model(message, image_path=None, chunk_size=1024):
+    image_input = None
     if image_path:
         image_input = {
             'mime_type': 'image/jpeg',
             'data': pathlib.Path(image_path).read_bytes()
         }
-        response = chat_session.send_message([message, image_input])
-    else:
-        response = chat_session.send_message([message])
-    return response.text
+
+    # Split the message into chunks
+    chunks = [message[i:i + chunk_size] for i in range(0, len(message), chunk_size)]
+    responses = []
+    
+    for chunk in chunks:
+        try:
+            if image_input:
+                response = chat_session.send_message([chunk, image_input])
+            else:
+                response = chat_session.send_message([chunk])
+            responses.append(response.text)
+        except Exception as e:
+            if 'RECITATION' in str(e):
+                st.warning("Recitation error occurred. Retrying with smaller chunk size...")
+                return send_message_to_model(message, image_path, chunk_size // 2)
+            else:
+                raise e
+    
+    return "".join(responses)
 
 # Streamlit app
 def main():
@@ -84,8 +102,7 @@ def main():
                     "3. A detailed description of the color scheme used, including specific colors and gradients, with exact color codes where possible. "
                     "4. An explanation of any typography used, including font families, sizes, and styles. "
                     "5. An assessment of the spacing, padding, and margin strategies used throughout the UI. "
-                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors. "
-                    "7. Recommendations for best practices or potential improvements based on the analysis."
+                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
