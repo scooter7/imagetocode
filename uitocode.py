@@ -3,8 +3,8 @@ import pathlib
 from PIL import Image
 import google.generativeai as genai
 
-# Configure the API key directly in the script
-API_KEY = 'YOUR KEY'
+# Configure the API key using Streamlit secrets
+API_KEY = st.secrets["google_gemini_api_key"]
 genai.configure(api_key=API_KEY)
 
 # Generation configuration
@@ -27,8 +27,8 @@ safety_settings = [
 # Model name
 MODEL_NAME = "gemini-1.5-pro-latest"
 
-# Framework selection (e.g., Tailwind, Bootstrap, etc.)
-framework = "Regular CSS use flex grid etc"  # Change this to "Bootstrap" or any other framework as needed
+# Framework selection
+framework = "Bootstrap"
 
 # Create the model
 model = genai.GenerativeModel(
@@ -40,13 +40,19 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
+# Function to send a message to the model with chunking strategy
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
         'data': pathlib.Path(image_path).read_bytes()
     }
     response = chat_session.send_message([message, image_input])
+
+    # Implement chunking if the response is too large
+    if len(response.text) > 8000:
+        chunks = [response.text[i:i+8000] for i in range(0, len(response.text), 8000)]
+        return ''.join(chunks)
+    
     return response.text
 
 # Streamlit app
@@ -83,25 +89,28 @@ def main():
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.write(refined_description)
 
-                # Generate HTML
+                # Generate HTML and CSS
                 st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
+                html_prompt = f"Create separate HTML and CSS files based on the following UI description, using the UI elements described in the previous response. Include Bootstrap CSS within the CSS file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html or ```css. Here is the refined description: {refined_description}"
                 initial_html = send_message_to_model(html_prompt, temp_image_path)
-                st.code(initial_html, language='html')
+                
+                # Separate HTML and CSS content
+                html_content, css_content = initial_html.split('<style>')[0], initial_html.split('<style>')[1].replace('</style>', '')
 
-                # Refine HTML
-                st.write("🔧 Refining website...")
-                refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
-                refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
-                st.code(refined_html, language='html')
+                st.code(html_content, language='html')
+                st.code(css_content, language='css')
 
-                # Save the refined HTML to a file
-                with open("index.html", "w") as file:
-                    file.write(refined_html)
-                st.success("HTML file 'index.html' has been created.")
+                # Save the HTML and CSS to separate files
+                with open("index.html", "w") as html_file:
+                    html_file.write(html_content)
+                with open("styles.css", "w") as css_file:
+                    css_file.write(css_content)
+                
+                st.success("HTML and CSS files have been created.")
 
-                # Provide download link for HTML
-                st.download_button(label="Download HTML", data=refined_html, file_name="index.html", mime="text/html")
+                # Provide download links for HTML and CSS
+                st.download_button(label="Download HTML", data=html_content, file_name="index.html", mime="text/html")
+                st.download_button(label="Download CSS", data=css_content, file_name="styles.css", mime="text/css")
         except Exception as e:
             st.error(f"An error occurred: {e}")
 
