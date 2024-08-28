@@ -73,10 +73,20 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate UI description
-            if st.button("Code UI"):
-                st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements, including any gradients present."
+            # Generate robust UI analysis
+            if st.button("Analyze UI"):
+                st.write("🔍 Analyzing your UI in detail...")
+                prompt = (
+                    "Analyze the attached UI image thoroughly. "
+                    "Provide a comprehensive breakdown of the UI, including: "
+                    "1. A detailed description of the layout structure, including headers, footers, main sections, and any sidebars. "
+                    "2. Identification and description of all UI components (e.g., buttons, text fields, images) with their bounding boxes in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "3. A detailed description of the color scheme used, including specific colors and gradients, with exact color codes where possible. "
+                    "4. An explanation of any typography used, including font families, sizes, and styles. "
+                    "5. An assessment of the spacing, padding, and margin strategies used throughout the UI. "
+                    "6. A breakdown of any interactive elements (e.g., hover effects, animations) and their expected behaviors. "
+                    "7. Recommendations for best practices or potential improvements based on the analysis."
+                )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -95,7 +105,7 @@ def main():
                     f"Use Bootstrap for layout and structure. "
                     f"Here is the description: {description}"
                 )
-                html_code = send_message_to_model(html_prompt, temp_image_path)
+                html_code = send_message_to_model(html_prompt)
                 st.session_state['html_code'] = html_code
                 st.code(html_code, language='html')
 
@@ -112,7 +122,7 @@ def main():
                     f"Do not include any explanations, comments, or non-CSS content. "
                     f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined."
                 )
-                css_code = send_message_to_model(css_prompt, temp_image_path)
+                css_code = send_message_to_model(css_prompt)
                 st.session_state['css_code'] = css_code
                 st.code(css_code, language='css')
 
