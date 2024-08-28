@@ -98,6 +98,45 @@ def validate_and_format_css(css_code):
     sheet = parser.parseString(css_code)
     return sheet.cssText.decode('utf-8')
 
+# Function to generate HTML from the analysis
+def generate_html_from_analysis(description):
+    sections = [
+        "header",
+        "footer",
+        "main content",
+        "sidebar",
+        "interactive elements"
+    ]
+    html_parts = []
+
+    for section in sections:
+        st.write(f"Generating HTML for {section}...")
+        prompt = (
+            f"Generate HTML for the {section} based on the following UI analysis. "
+            f"Use semantic HTML5 tags and Bootstrap classes for layout. "
+            f"Only include div structure, colors, fonts, gradients, and HTML elements. "
+            f"Do not include any qualitative analysis, comments, explanations, or non-code content. "
+            f"UI analysis: {description}"
+        )
+        html_part = send_message_to_model(prompt)
+        clean_html = clean_code(html_part)
+        html_parts.append(clean_html)
+        st.code(clean_html, language='html')
+    
+    return "\n".join(html_parts)
+
+# Function to generate CSS for the HTML
+def generate_css_from_html(html_code):
+    st.write("Generating CSS for the provided HTML...")
+    prompt = (
+        f"Generate CSS to style the following HTML. "
+        f"Include styling for colors, gradients, padding, margins, and fonts. "
+        f"Do not include any comments or explanations. "
+        f"HTML: {html_code}"
+    )
+    css_code = send_message_to_model(prompt)
+    return clean_code(css_code)
+
 # Integration with your app
 def main():
     st.title("UI to Code 👨‍💻 ")
