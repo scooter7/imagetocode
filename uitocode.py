@@ -100,7 +100,8 @@ def generate_html_from_analysis(description):
         prompt = (
             f"Generate HTML for the {section} based on the following UI analysis. "
             f"Use semantic HTML5 tags and Bootstrap classes for layout. "
-            f"Do not include any comments, explanations, or non-code content. "
+            f"Only include div structure, colors, fonts, gradients, and HTML elements. "
+            f"Do not include any qualitative analysis, comments, explanations, or non-code content. "
             f"UI analysis: {description}"
         )
         html_part = send_message_to_model(prompt)
@@ -146,7 +147,8 @@ def main():
                 st.write("🔍 Analyzing your UI in detail...")
                 prompt = (
                     "Analyze the attached UI image thoroughly. "
-                    "Provide a detailed description of the layout, UI components, colors, typography, spacing, and interactions."
+                    "Provide a detailed description of the div structure, UI components, colors, typography, spacing, gradients, and HTML elements. "
+                    "Do not include any qualitative analysis or best practice recommendations."
                 )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
