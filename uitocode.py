@@ -40,7 +40,7 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with enhanced prompting
+# Function to send a message to the model
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
@@ -51,21 +51,20 @@ def send_message_to_model(message, image_path):
     response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to generate HTML and CSS separately with a focus on gradients
-def generate_html_and_css(refined_description, temp_image_path):
-    # Generate HTML with a focus on gradients and completeness
+# Function to generate HTML and CSS in smaller chunks
+def generate_html_in_steps(refined_description, temp_image_path):
+    # Generate base HTML first
     html_prompt = (
         f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. "
-        f"Ensure all design elements are included, especially gradients, borders, shadows, and any custom fonts. "
         f"The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. "
         f"Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
     )
     html_content = send_message_to_model(html_prompt, temp_image_path)
 
-    # Generate CSS separately if needed, ensuring gradients and other styles are captured
+    # Focus on CSS for gradients in a separate step
     css_prompt = (
-        f"Extract the CSS from the following HTML code and provide it as a separate CSS file. "
-        f"The CSS should use Bootstrap classes and custom styles as necessary, ensuring all gradients, borders, shadows, and fonts are accurately represented. "
+        f"Now, create the CSS needed to accurately represent the gradients, shadows, borders, and fonts used in the following HTML. "
+        f"Ensure that all visual details match the original UI closely. "
         f"Avoid using ```css. Here is the HTML code: {html_content}"
     )
     css_content = send_message_to_model(css_prompt, temp_image_path)
@@ -116,7 +115,7 @@ def main():
                 st.write(refined_description)
 
                 # Generate HTML and CSS separately with emphasis on gradients
-                html_content, css_content = generate_html_and_css(refined_description, temp_image_path)
+                html_content, css_content = generate_html_in_steps(refined_description, temp_image_path)
 
                 # Store the generated content in session state
                 st.session_state['html_content'] = html_content
