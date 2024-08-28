@@ -90,6 +90,10 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption='Uploaded Image.', use_column_width=True)
 
+            # Convert the image to RGB mode if it has an alpha channel (RGBA)
+            if image.mode == 'RGBA':
+                image = image.convert('RGB')
+
             # Save the uploaded image temporarily
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
