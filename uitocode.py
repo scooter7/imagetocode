@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 2048,  # Reduced to avoid recitation issues
+    "max_output_tokens": 1024,  # Further reduced to avoid recitation issues
     "response_mime_type": "text/plain",
 }
 
@@ -41,10 +41,10 @@ model = genai.GenerativeModel(
 chat_session = model.start_chat(history=[])
 
 # Function to chunk the prompt
-def chunk_text(text, max_chunk_size=500):
+def chunk_text(text, max_chunk_size=400):
     return [text[i:i+max_chunk_size] for i in range(0, len(text), max_chunk_size)]
 
-# Function to send a message to the model with chunking
+# Function to send a message to the model with chunking and response validation
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
@@ -57,7 +57,15 @@ def send_message_to_model(message, image_path):
     full_response = ""
     for chunk in chunks:
         response = chat_session.send_message([chunk, image_input])
-        full_response += response.text
+        if response.finish_reason == "RECITATION":
+            # Recitation detected, handle it
+            st.error("Recitation detected, splitting chunk further.")
+            smaller_chunks = chunk_text(chunk, max_chunk_size=200)
+            for smaller_chunk in smaller_chunks:
+                sub_response = chat_session.send_message([smaller_chunk, image_input])
+                full_response += sub_response.text
+        else:
+            full_response += response.text
 
     return full_response
 
