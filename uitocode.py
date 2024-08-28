@@ -5,6 +5,8 @@ import google.generativeai as genai
 import zipfile
 import io
 import re
+from bs4 import BeautifulSoup
+import cssutils
 
 # Configure the API key from Streamlit secrets
 API_KEY = st.secrets["gemini_api_key"]
@@ -76,13 +78,16 @@ def send_message_to_model(message, image_path=None, chunk_size=1024):
     
     return "".join(responses)
 
-# Function to clean up the code by removing comments and non-code content
-def clean_code(code):
-    # Remove HTML comments
-    code = re.sub(r'<!--.*?-->', '', code, flags=re.DOTALL)
-    # Remove CSS comments
-    code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
-    return code.strip()
+# Function to clean and format HTML code
+def clean_and_format_html(html_code):
+    soup = BeautifulSoup(html_code, 'html.parser')
+    return soup.prettify()
+
+# Function to clean and format CSS code
+def clean_and_format_css(css_code):
+    parser = cssutils.CSSParser()
+    sheet = parser.parseString(css_code)
+    return sheet.cssText.decode('utf-8')
 
 # Function to generate HTML for specific UI sections based on the analysis
 def generate_html_from_analysis(description):
@@ -105,7 +110,7 @@ def generate_html_from_analysis(description):
             f"UI analysis: {description}"
         )
         html_part = send_message_to_model(prompt)
-        clean_html = clean_code(html_part)
+        clean_html = clean_and_format_html(html_part)
         html_parts.append(clean_html)
         st.code(clean_html, language='html')
     
@@ -121,7 +126,7 @@ def generate_css_from_html(html_code):
         f"HTML: {html_code}"
     )
     css_code = send_message_to_model(prompt)
-    return clean_code(css_code)
+    return clean_and_format_css(css_code)
 
 # Streamlit app
 def main():
@@ -205,11 +210,12 @@ def main():
                 revised_html_css = send_message_to_model(revision_prompt)
                 
                 # Save the revised HTML and CSS files in memory
-                revised_html_bytes = clean_code(revised_html_css).encode('utf-8')
+                revised_html_bytes = clean_and_format_html(revised_html_css).encode('utf-8')
+                revised_css_bytes = clean_and_format_css(revised_html_css).encode('utf-8')
                 in_memory_zip = io.BytesIO()
                 with zipfile.ZipFile(in_memory_zip, "w") as zf:
                     zf.writestr("revised_index.html", revised_html_bytes)
-                    zf.writestr("revised_style.css", revised_html_bytes)
+                    zf.writestr("revised_style.css", revised_css_bytes)
                 in_memory_zip.seek(0)
 
                 st.success("Revised HTML and CSS files have been created.")
