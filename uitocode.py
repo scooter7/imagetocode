@@ -40,7 +40,7 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with enhanced prompting
+# Function to send a message to the model
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
@@ -51,38 +51,16 @@ def send_message_to_model(message, image_path):
     response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to generate high-level HTML structure
-def generate_structure(refined_description, temp_image_path):
-    # Generate base HTML structure first
-    html_prompt = (
-        f"Create a high-level HTML structure based on the following UI description. "
-        f"Ensure all major sections (header, footer, main content, sidebar) are included. "
-        f"Do not include any detailed CSS styles at this stage, just the structure. "
-        f"Return the HTML code only. Do not include any comments, explanations, or code blocks like ```html."
+# Function to generate and validate each section independently
+def generate_and_validate_section(section_name, image_path, existing_html=""):
+    section_prompt = (
+        f"Generate the {section_name} section of an HTML page, ensuring it is properly structured with no missing tags. "
+        f"Use Bootstrap for styling and ensure that there are no repeated elements. "
+        f"Include only the HTML code, and avoid adding any comments or code blocks like ```html. "
+        f"Here is the existing HTML content: {existing_html}"
     )
-    html_content = send_message_to_model(html_prompt, temp_image_path)
-    return html_content
-
-# Function to generate detailed HTML and CSS for each section
-def generate_detailed_section(section_description, html_content, temp_image_path):
-    # Generate detailed HTML and CSS for a specific section
-    detailed_prompt = (
-        f"Using the following HTML structure, generate the detailed HTML and CSS for the {section_description}. "
-        f"Ensure all design elements such as gradients, borders, shadows, and fonts are captured. "
-        f"Return only the HTML and CSS code. Do not include any comments, explanations, or code blocks like ```css or ```html."
-    )
-    section_content = send_message_to_model(detailed_prompt, temp_image_path)
-    return section_content
-
-# Function to extract and combine CSS
-def extract_and_combine_css(html_content, temp_image_path):
-    css_prompt = (
-        f"Extract all CSS from the following HTML code and combine it into a single CSS file. "
-        f"Ensure that all styles, including gradients, borders, shadows, and fonts, are included. "
-        f"Return only the CSS code. Do not include any comments, explanations, or code blocks like ```css."
-    )
-    css_content = send_message_to_model(css_prompt, temp_image_path)
-    return css_content
+    section_html = send_message_to_model(section_prompt, image_path)
+    return section_html
 
 # Streamlit app
 def main():
@@ -105,54 +83,43 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            # Generate UI description
-            if st.button("Code UI"):
-                st.write("🧑‍💻 Looking at your UI...")
-                prompt = (
-                    "Describe this UI in accurate details, ensuring that all design elements such as gradients, borders, shadows, and fonts are captured. "
-                    "When you reference a UI element, put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
-                    "Also, describe the color of the elements."
+            # Generate each section independently
+            if st.button("Generate HTML"):
+                st.write("Generating HTML...")
+
+                # Generate header
+                header_html = generate_and_validate_section("header", temp_image_path)
+                st.write("Header generated.")
+
+                # Generate main content
+                main_content_html = generate_and_validate_section("main content", temp_image_path, existing_html=header_html)
+                st.write("Main content generated.")
+
+                # Generate footer
+                footer_html = generate_and_validate_section("footer", temp_image_path, existing_html=main_content_html)
+                st.write("Footer generated.")
+
+                # Combine all sections
+                full_html = header_html + main_content_html + footer_html
+
+                # Store the final HTML in session state
+                st.session_state['html_content'] = full_html
+
+                # Generate CSS
+                css_prompt = (
+                    "Extract all the CSS from the following HTML and generate a single, well-structured CSS file. "
+                    "Ensure all styles are included and formatted correctly. "
+                    "Return only the CSS code without any comments or code blocks like ```css."
                 )
-                description = send_message_to_model(prompt, temp_image_path)
-                st.write(description)
+                combined_css = send_message_to_model(css_prompt, temp_image_path)
 
-                # Refine the description
-                st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = (
-                    f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. "
-                    f"Ensure all gradients, borders, shadows, and fonts are described. "
-                    f"Provide a refined and accurate description of the UI elements based on this comparison. "
-                    f"Here is the initial description: {description}"
-                )
-                refined_description = send_message_to_model(refine_prompt, temp_image_path)
-                st.write(refined_description)
-
-                # Generate high-level HTML structure
-                st.write("🛠️ Generating high-level structure...")
-                structure_html = generate_structure(refined_description, temp_image_path)
-                st.write(structure_html)
-
-                # Generate detailed HTML and CSS for each section
-                st.write("🛠️ Generating detailed sections...")
-                sections = ["header", "footer", "main content", "sidebar"]
-                detailed_html = structure_html
-
-                for section in sections:
-                    section_content = generate_detailed_section(section, detailed_html, temp_image_path)
-                    detailed_html += section_content
-
-                # Combine CSS into a single file
-                st.write("🛠️ Extracting and combining CSS...")
-                combined_css = extract_and_combine_css(detailed_html, temp_image_path)
-
-                # Store the generated content in session state
-                st.session_state['html_content'] = detailed_html
+                # Store the CSS in session state
                 st.session_state['css_content'] = combined_css
 
-                st.code(detailed_html, language='html')
+                st.code(full_html, language='html')
                 st.code(combined_css, language='css')
 
-                st.success("HTML and CSS files have been created.")
+                st.success("HTML and CSS files have been generated successfully!")
 
             # Provide download links for HTML and CSS if they exist in session state
             if 'html_content' in st.session_state:
