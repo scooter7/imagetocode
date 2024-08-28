@@ -2,6 +2,8 @@ import streamlit as st
 import pathlib
 from PIL import Image
 import google.generativeai as genai
+import zipfile
+import io
 
 # Configure the API key from Streamlit secrets
 API_KEY = st.secrets["gemini_api_key"]
@@ -9,10 +11,10 @@ genai.configure(api_key=API_KEY)
 
 # Generation configuration
 generation_config = {
-    "temperature": 1,
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_output_tokens": 8192,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "top_k": 40,
+    "max_output_tokens": 4096,
     "response_mime_type": "text/plain",
 }
 
@@ -28,7 +30,7 @@ safety_settings = [
 MODEL_NAME = "gemini-1.5-pro-latest"
 
 # Framework selection (e.g., Tailwind, Bootstrap, etc.)
-framework = "Bootstrap"  # Change this to "Bootstrap" or any other framework as needed
+framework = "Bootstrap"
 
 # Create the model
 model = genai.GenerativeModel(
@@ -71,7 +73,7 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also describe the color of the elements, including any gradients present."
                 description = send_message_to_model(prompt, temp_image_path)
                 st.session_state['description'] = description
                 st.write(description)
@@ -81,45 +83,50 @@ def main():
 
     if 'description' in st.session_state:
         description = st.session_state['description']
-        if st.button("Refine Description"):
-            try:
-                st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
-                refined_description = send_message_to_model(refine_prompt, temp_image_path)
-                st.session_state['refined_description'] = refined_description
-                st.write(refined_description)
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-
-    if 'refined_description' in st.session_state:
-        refined_description = st.session_state['refined_description']
         if st.button("Generate HTML"):
             try:
-                st.write("🛠️ Generating website...")
-                html_prompt = f"Create an HTML file based on the following UI description, using the UI elements described in the previous response. Include {framework} CSS within the HTML file to style the elements. Make sure the colors used are the same as the original UI. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. and ``` at the end. ONLY return the HTML code with inline CSS. Here is the refined description: {refined_description}"
-                initial_html = send_message_to_model(html_prompt, temp_image_path)
-                st.session_state['initial_html'] = initial_html
-                st.code(initial_html, language='html')
+                st.write("🛠️ Generating HTML...")
+                html_prompt = (
+                    f"Generate only the HTML code for the following UI. "
+                    f"Do not include any explanations, comments, or non-HTML content. "
+                    f"Use Bootstrap for layout and structure. "
+                    f"Here is the description: {description}"
+                )
+                html_code = send_message_to_model(html_prompt, temp_image_path)
+                st.session_state['html_code'] = html_code
+                st.code(html_code, language='html')
+
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-    if 'initial_html' in st.session_state:
-        initial_html = st.session_state['initial_html']
-        if st.button("Refine HTML"):
+    if 'html_code' in st.session_state:
+        html_code = st.session_state['html_code']
+        if st.button("Generate CSS"):
             try:
-                st.write("🔧 Refining website...")
-                refine_html_prompt = f"Validate the following HTML code based on the UI description and image and provide a refined version of the HTML code with {framework} CSS that improves accuracy, responsiveness, and adherence to the original design. ONLY return the refined HTML code with inline CSS. Avoid using ```html. and ``` at the end. Here is the initial HTML: {initial_html}"
-                refined_html = send_message_to_model(refine_html_prompt, temp_image_path)
-                st.session_state['refined_html'] = refined_html
-                st.code(refined_html, language='html')
+                st.write("🎨 Generating CSS...")
+                css_prompt = (
+                    f"Generate only the CSS code to style the HTML structure. "
+                    f"Do not include any explanations, comments, or non-CSS content. "
+                    f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined."
+                )
+                css_code = send_message_to_model(css_prompt, temp_image_path)
+                st.session_state['css_code'] = css_code
+                st.code(css_code, language='css')
 
-                # Save the refined HTML to a file
-                with open("index.html", "w") as file:
-                    file.write(refined_html)
-                st.success("HTML file 'index.html' has been created.")
+                # Save HTML and CSS files in memory
+                html_bytes = html_code.encode('utf-8')
+                css_bytes = css_code.encode('utf-8')
+                in_memory_zip = io.BytesIO()
+                with zipfile.ZipFile(in_memory_zip, "w") as zf:
+                    zf.writestr("index.html", html_bytes)
+                    zf.writestr("style.css", css_bytes)
+                in_memory_zip.seek(0)
 
-                # Provide download link for HTML
-                st.download_button(label="Download HTML", data=refined_html, file_name="index.html", mime="text/html")
+                st.success("HTML and CSS files have been created.")
+
+                # Provide download link for the zip file
+                st.download_button(label="Download ZIP", data=in_memory_zip, file_name="web_files.zip", mime="application/zip")
+
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
