@@ -40,7 +40,7 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
+# Function to send a message to the model with enhanced prompting
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
@@ -51,25 +51,28 @@ def send_message_to_model(message, image_path):
     response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to generate HTML and CSS in smaller chunks
-def generate_html_in_steps(refined_description, temp_image_path):
-    # Generate base HTML first
+# Function to generate high-level HTML structure
+def generate_structure(refined_description, temp_image_path):
+    # Generate base HTML structure first
     html_prompt = (
-        f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. "
-        f"The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. "
-        f"Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
+        f"Create a high-level HTML structure based on the following UI description. "
+        f"Ensure all major sections (header, footer, main content, sidebar) are included. "
+        f"Do not include any detailed CSS styles at this stage, just the structure. "
+        f"Here is the refined description: {refined_description}"
     )
     html_content = send_message_to_model(html_prompt, temp_image_path)
+    return html_content
 
-    # Focus on CSS for gradients in a separate step
-    css_prompt = (
-        f"Now, create the CSS needed to accurately represent the gradients, shadows, borders, and fonts used in the following HTML. "
-        f"Ensure that all visual details match the original UI closely. "
-        f"Avoid using ```css. Here is the HTML code: {html_content}"
+# Function to generate detailed HTML and CSS for each section
+def generate_detailed_section(section_description, html_content, temp_image_path):
+    # Generate detailed HTML and CSS for a specific section
+    detailed_prompt = (
+        f"Using the following HTML structure, generate the detailed HTML and CSS for the {section_description}. "
+        f"Ensure all design elements such as gradients, borders, shadows, and fonts are captured. "
+        f"Here is the HTML structure: {html_content}"
     )
-    css_content = send_message_to_model(css_prompt, temp_image_path)
-
-    return html_content, css_content
+    section_content = send_message_to_model(detailed_prompt, temp_image_path)
+    return section_content
 
 # Streamlit app
 def main():
@@ -114,24 +117,30 @@ def main():
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.write(refined_description)
 
-                # Generate HTML and CSS separately with emphasis on gradients
-                html_content, css_content = generate_html_in_steps(refined_description, temp_image_path)
+                # Generate high-level HTML structure
+                st.write("🛠️ Generating high-level structure...")
+                structure_html = generate_structure(refined_description, temp_image_path)
+                st.write(structure_html)
+
+                # Generate detailed HTML and CSS for each section
+                st.write("🛠️ Generating detailed sections...")
+                sections = ["header", "footer", "main content", "sidebar"]
+                detailed_html = structure_html
+
+                for section in sections:
+                    section_content = generate_detailed_section(section, detailed_html, temp_image_path)
+                    detailed_html += section_content
 
                 # Store the generated content in session state
-                st.session_state['html_content'] = html_content
-                st.session_state['css_content'] = css_content
+                st.session_state['html_content'] = detailed_html
 
-                st.code(html_content, language='html')
-                if css_content:
-                    st.code(css_content, language='css')
+                st.code(detailed_html, language='html')
 
                 st.success("HTML and CSS files have been created.")
 
             # Provide download links for HTML and CSS if they exist in session state
             if 'html_content' in st.session_state:
                 st.download_button(label="Download HTML", data=st.session_state['html_content'], file_name="index.html", mime="text/html")
-            if 'css_content' in st.session_state:
-                st.download_button(label="Download CSS", data=st.session_state['css_content'], file_name="styles.css", mime="text/css")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
