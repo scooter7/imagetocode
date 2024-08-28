@@ -92,6 +92,7 @@ def generate_html_from_analysis(description):
             f"Based on the following UI analysis, generate HTML for the {section}. "
             f"Ensure that all relevant UI elements are included and use proper semantic HTML5 tags. "
             f"Use Bootstrap classes for layout and structure. "
+            f"Do not include any comments, explanations, or non-code content. "
             f"UI analysis: {description}"
         )
         html_part = send_message_to_model(prompt)
@@ -107,6 +108,7 @@ def generate_css_from_html(html_code):
         f"Generate CSS to style the following HTML structure. "
         f"Ensure that colors, gradients, padding, margins, fonts, and other styling elements are properly defined. "
         f"Use Bootstrap's classes where applicable. "
+        f"Do not include any comments, explanations, or non-code content. "
         f"HTML structure: {html_code}"
     )
     return send_message_to_model(prompt)
