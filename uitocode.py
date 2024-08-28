@@ -12,7 +12,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 2048,
+    "max_output_tokens": 2048,  # Reduced to avoid recitation issues
     "response_mime_type": "text/plain",
 }
 
@@ -27,6 +27,9 @@ safety_settings = [
 # Model name
 MODEL_NAME = "gemini-1.5-pro-latest"
 
+# Framework selection
+framework = "Bootstrap"
+
 # Create the model
 model = genai.GenerativeModel(
     model_name=MODEL_NAME,
@@ -37,55 +40,32 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model
-def send_message_to_model(message, image_path=None):
-    if image_path:
-        image_input = {
-            'mime_type': 'image/jpeg',
-            'data': pathlib.Path(image_path).read_bytes()
-        }
-        response = chat_session.send_message([message, image_input])
-    else:
-        response = chat_session.send_message([message])
+# Function to send a message to the model with manual chunking
+def send_message_to_model(message, image_path):
+    image_input = {
+        'mime_type': 'image/jpeg',
+        'data': pathlib.Path(image_path).read_bytes()
+    }
+
+    # Send the message and get the response
+    response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to analyze the image and generate a description of the UI components
-def analyze_image_and_generate_description(image_path):
-    prompt = (
-        "Analyze the provided image and generate a detailed description of all UI components. "
-        "Ensure to include all sections like headers, footers, navigation bars, sidebars, buttons, forms, and any other significant elements. "
-        "For each component, describe its layout, color, text, and any interactive elements. "
-        "Provide this information in a format that can be used to generate clean and structured HTML and CSS code."
-    )
-    description = send_message_to_model(prompt, image_path)
-    return description
+# Function to generate HTML and CSS separately
+def generate_html_and_css(refined_description, temp_image_path):
+    # Generate HTML
+    html_prompt = f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
+    html_content = send_message_to_model(html_prompt, temp_image_path)
 
-# Function to generate the full HTML document with explicit instructions
-def generate_full_html(description):
-    prompt = (
-        "Based on the following description, generate a full HTML5 document. "
-        "Ensure the document starts with `<!DOCTYPE html>` and includes proper opening and closing tags for <html>, <head>, <body>, and </html>. "
-        "The HTML should be well-structured, clean, and ready for use. Avoid overlapping elements and ensure proper layering. "
-        "Here is the description: "
-        f"{description}"
-    )
-    full_html = send_message_to_model(prompt)
-    return full_html
+    # Generate CSS separately if needed
+    css_prompt = f"Extract the CSS from the following HTML code and provide it as a separate CSS file. The CSS should use Bootstrap classes and custom styles as necessary. Avoid using ```css. Here is the HTML code: {html_content}"
+    css_content = send_message_to_model(css_prompt, temp_image_path)
 
-# Function to generate CSS for the entire page
-def generate_css_for_page(full_html):
-    prompt = (
-        "Extract and generate the CSS for the following HTML. "
-        "Ensure all styles are correctly applied and formatted. "
-        "Do not include any comments or code blocks like ```css. "
-        "Return only the valid CSS code, and ensure that all layers and z-indexes are correctly handled to avoid overlap."
-    )
-    css_content = send_message_to_model(prompt)
-    return css_content
+    return html_content, css_content
 
 # Streamlit app
 def main():
-    st.title("Gemini 1.5 Pro, UI to Code 👨‍💻")
+    st.title("Gemini 1.5 Pro, UI to Code 👨‍💻 ")
     st.subheader('Made with ❤️ by [Skirano](https://x.com/skirano)')
 
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -96,7 +76,7 @@ def main():
             image = Image.open(uploaded_file)
             st.image(image, caption='Uploaded Image.', use_column_width=True)
 
-            # Convert the image to RGB mode if it has an alpha channel (RGBA)
+            # Convert image to RGB mode if it has an alpha channel
             if image.mode == 'RGBA':
                 image = image.convert('RGB')
 
@@ -104,25 +84,31 @@ def main():
             temp_image_path = pathlib.Path("temp_image.jpg")
             image.save(temp_image_path, format="JPEG")
 
-            if st.button("Generate HTML and CSS"):
-                st.write("Analyzing image and generating UI description...")
-                description = analyze_image_and_generate_description(temp_image_path)
+            # Generate UI description
+            if st.button("Code UI"):
+                st.write("🧑‍💻 Looking at your UI...")
+                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                description = send_message_to_model(prompt, temp_image_path)
                 st.write(description)
 
-                st.write("Generating full HTML document...")
-                full_html = generate_full_html(description)
+                # Refine the description
+                st.write("🔍 Refining description with visual comparison...")
+                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
+                refined_description = send_message_to_model(refine_prompt, temp_image_path)
+                st.write(refined_description)
 
-                st.write("Generating CSS...")
-                combined_css = generate_css_for_page(full_html)
+                # Generate HTML and CSS separately
+                html_content, css_content = generate_html_and_css(refined_description, temp_image_path)
 
                 # Store the generated content in session state
-                st.session_state['html_content'] = full_html
-                st.session_state['css_content'] = combined_css
+                st.session_state['html_content'] = html_content
+                st.session_state['css_content'] = css_content
 
-                st.code(full_html, language='html')
-                st.code(combined_css, language='css')
+                st.code(html_content, language='html')
+                if css_content:
+                    st.code(css_content, language='css')
 
-                st.success("HTML and CSS files have been generated successfully!")
+                st.success("HTML and CSS files have been created.")
 
             # Provide download links for HTML and CSS if they exist in session state
             if 'html_content' in st.session_state:
