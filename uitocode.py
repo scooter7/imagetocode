@@ -40,7 +40,7 @@ model = genai.GenerativeModel(
 # Start a chat session
 chat_session = model.start_chat(history=[])
 
-# Function to send a message to the model with manual chunking
+# Function to send a message to the model with enhanced prompting
 def send_message_to_model(message, image_path):
     image_input = {
         'mime_type': 'image/jpeg',
@@ -51,14 +51,23 @@ def send_message_to_model(message, image_path):
     response = chat_session.send_message([message, image_input])
     return response.text
 
-# Function to generate HTML and CSS separately
+# Function to generate HTML and CSS separately with a focus on gradients
 def generate_html_and_css(refined_description, temp_image_path):
-    # Generate HTML
-    html_prompt = f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
+    # Generate HTML with a focus on gradients and completeness
+    html_prompt = (
+        f"Create an HTML file based on the following UI description, using Bootstrap CSS within the HTML file to style the elements. "
+        f"Ensure all design elements are included, especially gradients, borders, shadows, and any custom fonts. "
+        f"The UI needs to be responsive and mobile-first, matching the original UI as closely as possible. "
+        f"Do not include any explanations or comments. Avoid using ```html. Here is the refined description: {refined_description}"
+    )
     html_content = send_message_to_model(html_prompt, temp_image_path)
 
-    # Generate CSS separately if needed
-    css_prompt = f"Extract the CSS from the following HTML code and provide it as a separate CSS file. The CSS should use Bootstrap classes and custom styles as necessary. Avoid using ```css. Here is the HTML code: {html_content}"
+    # Generate CSS separately if needed, ensuring gradients and other styles are captured
+    css_prompt = (
+        f"Extract the CSS from the following HTML code and provide it as a separate CSS file. "
+        f"The CSS should use Bootstrap classes and custom styles as necessary, ensuring all gradients, borders, shadows, and fonts are accurately represented. "
+        f"Avoid using ```css. Here is the HTML code: {html_content}"
+    )
     css_content = send_message_to_model(css_prompt, temp_image_path)
 
     return html_content, css_content
@@ -87,17 +96,26 @@ def main():
             # Generate UI description
             if st.button("Code UI"):
                 st.write("🧑‍💻 Looking at your UI...")
-                prompt = "Describe this UI in accurate details. When you reference a UI element put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. Also Describe the color of the elements."
+                prompt = (
+                    "Describe this UI in accurate details, ensuring that all design elements such as gradients, borders, shadows, and fonts are captured. "
+                    "When you reference a UI element, put its name and bounding box in the format: [object name (y_min, x_min, y_max, x_max)]. "
+                    "Also, describe the color of the elements."
+                )
                 description = send_message_to_model(prompt, temp_image_path)
                 st.write(description)
 
                 # Refine the description
                 st.write("🔍 Refining description with visual comparison...")
-                refine_prompt = f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. Also Describe the color of the elements. Provide a refined and accurate description of the UI elements based on this comparison. Here is the initial description: {description}"
+                refine_prompt = (
+                    f"Compare the described UI elements with the provided image and identify any missing elements or inaccuracies. "
+                    f"Ensure all gradients, borders, shadows, and fonts are described. "
+                    f"Provide a refined and accurate description of the UI elements based on this comparison. "
+                    f"Here is the initial description: {description}"
+                )
                 refined_description = send_message_to_model(refine_prompt, temp_image_path)
                 st.write(refined_description)
 
-                # Generate HTML and CSS separately
+                # Generate HTML and CSS separately with emphasis on gradients
                 html_content, css_content = generate_html_and_css(refined_description, temp_image_path)
 
                 # Store the generated content in session state
